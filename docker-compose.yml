@@ -1,0 +1,16 @@
+services:
+  tower-souls:
+    build: .
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 4317
+    ports:
+      - "4317:4317"
+      # 如果前面有 Nginx/Caddy，改成只监听本机：
+      # - "127.0.0.1:4317:4317"
+    volumes:
+      - tower-data:/app/data
+
+volumes:
+  tower-data:

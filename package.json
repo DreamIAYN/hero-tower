@@ -1,0 +1,13 @@
+{
+  "name": "tower-souls",
+  "version": "2.12.0",
+  "private": true,
+  "type": "module",
+  "description": "塔魂：四境争锋 —— 无领地建塔、多英雄小队、点击即攻击的多人实时对战游戏",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "smoke": "node scripts/smoke.mjs",
+    "build:offline": "node scripts/build-offline.mjs"
+  }
+}

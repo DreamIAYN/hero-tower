@@ -1,0 +1,7 @@
+data
+.git
+shots
+scripts
+deploy
+*.md
+npm-debug.log*

@@ -1,0 +1,247 @@
+\documentclass{ctexart}
+\usepackage[a4paper,landscape,margin=1.25cm,top=1.45cm,bottom=1.35cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage[table]{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{ragged2e}
+
+\definecolor{ink}{HTML}{172B31}
+\definecolor{teal}{HTML}{177E7A}
+\definecolor{tealsoft}{HTML}{DDEFED}
+\definecolor{rowbg}{HTML}{F5FAF9}
+\definecolor{line}{HTML}{9FC9C5}
+
+\color{ink}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+\renewcommand{\arraystretch}{1.16}
+\setlength{\tabcolsep}{4pt}
+\setlength{\headheight}{20pt}
+\arrayrulecolor{line}
+\setlist[itemize]{leftmargin=1.3em,itemsep=1.5pt,topsep=2pt}
+\setlist[enumerate]{leftmargin=1.5em,itemsep=1.5pt,topsep=2pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\sffamily\color{teal}塔魂：四境争锋}
+\fancyhead[R]{\small\sffamily\color{teal}英雄与魂塔数据表}
+\fancyfoot[C]{\small\sffamily\color{ink}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{teal}\leaders\hrule height \headrulewidth\hfill}}
+
+\titleformat{\section}{\Large\bfseries\sffamily\color{teal}}{}{0pt}{}
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+\titleformat{\subsection}{\large\bfseries\sffamily\color{ink}}{}{0pt}{}
+\titlespacing*{\subsection}{0pt}{8pt}{3pt}
+
+
+\begin{document}
+
+\begin{center}
+{\sffamily\bfseries\fontsize{23}{27}\selectfont 塔魂：四境争锋}\\[2pt]
+{\sffamily\bfseries\fontsize{16}{19}\selectfont 英雄与魂塔数据表}\\[4pt]
+{\small 版本 2.12.0 \quad · \quad 英雄基础面板为 Lv1 \quad · \quad 射程/移速单位 px，攻速为秒，金币单位为 G \quad · \quad 建议 A4 横向打印}\\[5pt]
+{\color{teal}\rule{\textwidth}{1.1pt}}
+\end{center}
+
+\section*{一、英雄基础面板}
+
+{\footnotesize
+\begin{tabularx}{\textwidth}{@{}l l r r r r r r r r@{}}
+\rowcolor{teal}\color{white}\bfseries 英雄 & \color{white}\bfseries 定位 & \color{white}\bfseries 价格 & \color{white}\bfseries 生命 & \color{white}\bfseries 攻击 & \color{white}\bfseries 护甲 & \color{white}\bfseries 射程 & \color{white}\bfseries 移速 & \color{white}\bfseries 攻击间隔 & \color{white}\bfseries 裸 DPS \\
+炎锋 & 近战 / 爆发 & 140 & 300 & 30 & 3 & 44 & 108 & 0.78s & 38.5 \\
+霜翎 & 远程 / 控制 & 170 & 210 & 24 & 1 & 192 & 92 & 1.02s & 23.5 \\
+影刺 & 刺客 / 追击 & 150 & 205 & 36 & 1 & 42 & 126 & 0.62s & 58.1 \\
+镜影 & 近战 / 分身 & 160 & 235 & 33 & 2 & 46 & 118 & 0.70s & 47.1 \\
+灵姝 & 远程 / 召唤 & 165 & 235 & 23 & 1 & 176 & 94 & 1.00s & 23.0 \\
+磐卫 & 坦克 / 护盾 & 120 & 385 & 23 & 6 & 40 & 80 & 0.98s & 23.5 \\
+苍隼 & 远程 / 狙击 & 175 & 195 & 38 & 1 & 245 & 94 & 1.15s & 33.0 \\
+月弦 & 远程 / 守护 & 165 & 225 & 20 & 2 & 180 & 92 & 1.00s & 20.0 \\
+荆棘 & 远程 / 控制 & 155 & 230 & 21 & 2 & 150 & 96 & 1.00s & 21.0 \\
+雷铸 & 近战 / 链雷 & 170 & 320 & 30 & 4 & 50 & 105 & 0.85s & 35.3 \\
+\end{tabularx}
+}
+
+\vspace{2pt}
+{\footnotesize \textbf{裸 DPS} = 攻击力 ÷ 攻击间隔，不计护甲、技能、装备与手动点击。}
+
+\subsection*{英雄成长与复活}
+
+{\footnotesize
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+最高等级 & 8 级 \\
+每级成长 & 最大生命 +13\%，攻击 +14\%，护甲 +1，英雄产金 +0.08 / 秒 \\
+升级费用 & $90 + 60 \times (\text{当前等级}-1)$ 金币；升级时回复新增最大生命差值 \\
+死亡重生 & $5 + 0.6 \times (\text{等级}-1)$ 秒；绑定魂塔被毁后永久无法重生 \\
+塔边恢复 & 距离自己绑定的魂塔 180 px 内，每秒恢复 5 点生命 \\
+产金 & $1.55 + 0.08 \times (\text{等级}-1)$ 金币 / 秒 \\
+\bottomrule
+\end{tabularx}
+}
+
+\enlargethispage{2.4cm}
+
+\subsection*{镜像与灵仆（召唤物细则）}
+
+{\footnotesize
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+镜像 & 持续 10 秒；继承本体 55\% 最大生命、55\% 攻击，保留本体护甲、射程、攻速；同一镜影英雄最多 1 个；不能释放技能或再次分身；完全服从玩家的移动/攻击指令，无指令时原地待命，不自动索敌。 \\
+灵仆 & 持续 22 秒；同一玩家最多 12 只；自动索敌，附近无敌人时向最近敌方魂塔推进；召唤者死亡/被淘汰/到期后消失。 \\
+灵仆 Lv1 & 生命 60，攻击 7，护甲 0，射程 32，移速 125，攻击间隔 1.0s。 \\
+灵仆成长 & 每级 +10 最大生命、+1.2 攻击（随召唤者等级）。 \\
+\bottomrule
+\end{tabularx}
+}
+
+\newpage
+
+\section*{二、英雄技能}
+
+{\footnotesize
+\begin{tabularx}{\textwidth}{@{}l l r r X@{}}
+\rowcolor{teal}\color{white}\bfseries 英雄 & \color{white}\bfseries 技能 & \color{white}\bfseries 耗金 & \color{white}\bfseries 冷却 & \color{white}\bfseries 效果（Lv1 基础 / 每额外 1 级成长） \\
+炎锋 & 烈焰回旋 & 35 & 8s & 以自身为中心 112 px 范围，造成 $72 + 11\times(\text{等级}-1)$ 技能伤害。 \\
+霜翎 & 冰封领域 & 45 & 10s & 在 235 px 内指定区域降下 86 px 暴雪，造成 $52 + 8\times(\text{等级}-1)$ 伤害，并减速 55\%，持续 2.8s。 \\
+影刺 & 暗影突袭 & 40 & 7s & 向指定方向突进最多 178 px，落点 74 px 范围造成 $64 + 9\times(\text{等级}-1)$ 伤害；不能穿越山地/水域。 \\
+磐卫 & 岩甲护盾 & 30 & 12s & 获得 $125 + 28\times(\text{等级}-1)$ 护盾，持续 5s。 \\
+镜影 & 镜影分身 & 70 & 20s & 生成持续 10s 的镜像，继承 55\% 生命与攻击；同英雄限 1 个；镜像不能释放技能/再次分身；复制玩家的移动/攻击指令。 \\
+灵姝 & 万灵奔涌 & 60 & 16s & 召唤 6 只持续 22s 的灵仆；同一玩家最多同时 12 只。 \\
+苍隼 & 裂空贯射 & 55 & 11s & 向指定方向射出 320 px 长、28 px 宽的贯穿箭，命中路径所有敌人；对生命 $\le 35\%$ 的目标伤害额外 $\times 1.5$。 \\
+月弦 & 月华庇护 & 60 & 14s & 为 170 px 内友方英雄、魂塔、召唤物恢复 $70 + 12\times(\text{等级}-1)$ 生命，并附加 $55 + 8\times(\text{等级}-1)$ 护盾，持续 5s。 \\
+荆棘 & 荆棘缚地 & 50 & 12s & 在 230 px 内指定区域召出 90 px 荆棘，造成 $40 + 7\times(\text{等级}-1)$ 伤害；命中的敌方英雄定身 2s。 \\
+雷铸 & 链雷 & 55 & 10s & 从 220 px 内最近敌人起手，最多连续击中 4 个目标；首个目标造成 $55 + 8\times(\text{等级}-1)$ 伤害，之后每跳 $\times 0.8$；附加 35\% 减速，持续 1.2s。 \\
+\end{tabularx}
+}
+
+\vspace{2pt}
+{\footnotesize
+\textbf{落点技能}：霜翎、影刺、苍隼、荆棘；手机端先点技能，再点地图。\\
+\textbf{直接释放}：炎锋、磐卫、镜影、灵姝、月弦、雷铸。\\
+\textbf{技能归属}：技能只由当前选中英雄释放；其他英雄只自动攻击。
+}
+
+\newpage
+
+\section*{三、魂塔基础与等级}
+
+{\footnotesize
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+初始耐久 & 1000 \\
+初始护甲 & 5.0 \\
+初始产金 & 2.2 金币 / 秒 \\
+等级上限 & 6 级 \\
+基础攻击 & 无；需要安装加农炮 \\
+建造费用 & 第一座免费；后续 $70 + 50\times(\text{当前塔数}) + \text{英雄价格}$ \\
+建造限制 & 山地、水域、资源点、已有魂塔所在格不可建造；无领地限制 \\
+塔毁规则 & 停止产金，不能升级、装备或修复；绑定英雄无法重生，存活时进入背水一战 \\
+淘汰条件 & 所有魂塔被毁 + 所有英雄阵亡 \\
+死亡模式 & 10:00 触发：所有塔立即崩塌，且本局不能再新建魂塔 \\
+\bottomrule
+\end{tabularx}
+}
+
+\subsection*{等级面板（未安装护壁/聚金器）}
+
+{\footnotesize
+\begin{tabularx}{\textwidth}{@{}c r r r r r r@{}}
+\rowcolor{teal}\color{white}\bfseries 等级 & \color{white}\bfseries 最大耐久 & \color{white}\bfseries 护甲 & \color{white}\bfseries 产金/秒 & \color{white}\bfseries 升到该级费用 & \color{white}\bfseries 加农炮伤害 & \color{white}\bfseries 加农炮射程 \\
+1 & 1000 & 5.0 & 2.20 & — & 16 & 178 \\
+2 & 1230 & 5.8 & 2.68 & 130 & 19 & 185 \\
+3 & 1460 & 6.6 & 3.16 & 200 & 22 & 192 \\
+4 & 1690 & 7.4 & 3.64 & 270 & 25 & 199 \\
+5 & 1920 & 8.2 & 4.12 & 340 & 28 & 206 \\
+6 & 2150 & 9.0 & 4.60 & 410 & 31 & 213 \\
+\end{tabularx}
+}
+
+\vspace{2pt}
+{\footnotesize
+升到 6 级总升级费：130 + 200 + 270 + 340 + 410 = \textbf{1350 金币}。\\
+加农炮基础攻击间隔 1.25s；优先攻击附近敌方英雄与召唤物，不攻击敌方魂塔。
+}
+
+\subsection*{魂塔装备}
+
+{\footnotesize
+\begin{tabularx}{\textwidth}{@{}l c r X@{}}
+\rowcolor{teal}\color{white}\bfseries 装备 & \color{white}\bfseries 上限 & \color{white}\bfseries 价格 & \color{white}\bfseries 效果 \\
+加农炮 & 2 & $120 + 45\times(\text{已有数量})$ & 自动攻击附近敌方英雄/召唤物；伤害 $16 + 3\times(\text{塔等级}-1)$，射程 $178 + 7\times(\text{塔等级}-1)$，基础间隔 1.25s；第 2 门使每发伤害 $\times 1.55$、冷却变为 0.625s \\
+护壁 & 2 & $90 + 40\times(\text{已有数量})$ & 每个 +160 最大耐久、+4 护甲 \\
+聚金器 & 2 & $100 + 50\times(\text{已有数量})$ & 每个 +1.2 金币/秒 \\
+修复 & — & 90 & 恢复 25\% 最大耐久；25 秒冷却 \\
+\end{tabularx}
+}
+
+{\footnotesize
+\textbf{最终属性：}\quad
+最大耐久 $=1000+230\times(\text{等级}-1)+160\times\text{护壁数量}$；\quad
+护甲 $=5+0.8\times(\text{等级}-1)+4\times\text{护壁数量}$；\quad
+产金/秒 $=2.2+0.48\times(\text{等级}-1)+1.2\times\text{聚金器数量}$。
+}
+
+\newpage
+
+\section*{四、战斗与伤害结算}
+
+\subsection*{伤害公式}
+
+\[
+\text{普通/自动攻击} = \max(1,\ \text{攻击力}\times\text{修正} - \text{目标护甲})
+\]
+\[
+\text{手动点击攻击} = \max(1,\ \text{攻击力}\times0.55\times\text{修正} - \text{目标护甲})
+\]
+\[
+\text{技能伤害} = \max(1,\ \text{技能伤害}\times\text{修正} - \text{目标护甲}\times0.5)
+\]
+
+\begin{itemize}
+\item 手动攻击最小间隔 0.065s（约 15 CPS 上限）；不重置自动攻击计时。
+\item 护盾优先吸收伤害。
+\item 英雄对魂塔：物理伤害 $\times1.55$，技能伤害 $\times1.3$。
+\item 背水一战英雄攻击 $\times1.2$。
+\item 英雄对塔的普通攻击、自动攻击、手动点击都按物理修正计算。
+\end{itemize}
+
+\subsection*{魂塔关键数值}
+
+{\footnotesize
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+基础耐久/护甲 & 1000 / 5.0；每级 +230 / +0.8 \\
+基础产金 & 2.2 / 秒；每级 +0.48 / 秒 \\
+护壁 & 每个 +160 耐久、+4 护甲；最多 2 个 \\
+聚金器 & 每个 +1.2 金币/秒；最多 2 个 \\
+修复 & 90 金币，恢复 25\% 最大耐久，25 秒冷却；只能修存活塔 \\
+塔边恢复 & 英雄在绑定塔 180 px 内，每秒恢复 5 点生命 \\
+加农炮 & 基础伤害 16，基础射程 178，基础间隔 1.25s；随塔等级成长；最多 2 门 \\
+死亡模式 & 10:00 所有塔崩塌、不能新建；存活英雄背水，阵亡英雄不能重生 \\
+\end{tabularx}
+}
+
+\subsection*{关键价格速查}
+
+{\footnotesize
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+初始金币 & 340 \\
+初始英雄召唤 & 英雄价格 120--175 \\
+额外魂塔 & $70 + 50\times(\text{当前塔数}) + \text{英雄价格}$ \\
+初始魂塔 & 免费 \\
+英雄升级 & $90 + 60\times(\text{当前等级}-1)$，最高 8 级 \\
+魂塔升级 & $130 + 70\times(\text{当前等级}-1)$，最高 6 级 \\
+资源点 & 8 个；每个 45 金币；刷新间隔 16 秒逐步缩短到 6 秒 \\
+英雄重生 & $5 + 0.6\times(\text{等级}-1)$ 秒；塔毁后不能重生 \\
+\end{tabularx}
+}
+
+\end{document}

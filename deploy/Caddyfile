@@ -1,0 +1,8 @@
+# /etc/caddy/Caddyfile
+# Caddy 会自动申请 HTTPS 证书；把 tower.example.com 换成已解析到本机的域名。
+tower.example.com {
+    reverse_proxy 127.0.0.1:4317 {
+        # SSE 的低延迟关键：每次写入立即 flush。
+        flush_interval -1
+    }
+}

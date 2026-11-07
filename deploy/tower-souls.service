@@ -1,0 +1,23 @@
+[Unit]
+Description=Tower Souls (塔魂：四境争锋)
+After=network.target
+
+[Service]
+Type=simple
+User=tower
+Group=tower
+WorkingDirectory=/opt/tower-souls
+Environment=NODE_ENV=production
+# 直接用 http://服务器IP:4317 访问时使用 0.0.0.0；
+# 前面有 Nginx/Caddy 反代时改成 127.0.0.1，避免绕过代理。
+Environment=HOST=0.0.0.0
+Environment=PORT=4317
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
