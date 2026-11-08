@@ -1023,10 +1023,16 @@ function handleAction(room, player, action) {
       if (!simPlayer || simPlayer.eliminated) return { ok: false, error: '已被淘汰，无法暂停' };
       room.paused = !room.paused;
       room.lastTick = Date.now();
+      if (room.paused) {
+        for (const sp of room.sim.players) {
+          for (const h of sp.heroes) h.inputDir = null;
+        }
+      }
       broadcast(room, true);
       return { ok: true, paused: room.paused };
     }
     case 'move':
+    case 'moveDir':
     case 'attack':
     case 'skill':
     case 'summon':

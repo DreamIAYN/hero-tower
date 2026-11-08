@@ -6,6 +6,7 @@
 import {
   AI_NAMES,
   AI_LEVELS,
+  AI_HERO_TUNING,
   BOUNTY_RATIO,
   HEROES,
   HERO_INCOME,
@@ -42,6 +43,7 @@ import {
   terrainSpeed,
   tileBuildable,
   tileCenter,
+  tilePassable,
   worldToTile,
 } from './mapgen.js';
 
@@ -316,6 +318,7 @@ function createHeroEntity(sim, player, tower, heroId) {
     repathAt: 0,
     lastManualAt: -99,
     kite: false,
+    inputDir: null,
     earned: 0,
     kills: 0,
     deaths: 0,
@@ -591,6 +594,23 @@ export function createBattle(room, map) {
       : { x: spawn.default.x, y: spawn.default.y };
     const towerCenter = tileCenter(map, placement.x, placement.y);
 
+    const aiBaseCfg = AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
+    const heroTuning = rp.isAI ? (AI_HERO_TUNING[rp.heroId] || {}) : {};
+    const scaleRange = (range, scale) => [
+      range[0] * (scale || 1),
+      range[1] * (scale || 1),
+    ];
+    const aiCfg = rp.isAI
+      ? {
+          ...aiBaseCfg,
+          ...heroTuning,
+          think: heroTuning.think || scaleRange(aiBaseCfg.think, heroTuning.thinkScale),
+          spend: heroTuning.spend || scaleRange(aiBaseCfg.spend, heroTuning.spendScale),
+          startGoldBonus:
+            (aiBaseCfg.startGoldBonus || 0) + (heroTuning.startGold || 0),
+        }
+      : aiBaseCfg;
+
     const player = {
       id: rp.id,
       name: rp.name,
@@ -602,7 +622,7 @@ export function createBattle(room, map) {
       preferredHeroId: HEROES[rp.heroId] ? rp.heroId : null,
       passive: !!rp.passive,
       gold: START_GOLD + (room.tutorial && !rp.isAI ? 400 : 0) +
-        (rp.isAI ? (AI_LEVELS[sim.aiLevel]?.startGoldBonus || 0) : 0),
+        (rp.isAI ? (aiCfg.startGoldBonus || 0) : 0),
       kills: 0,
       deaths: 0,
       damageDealt: 0,
@@ -624,8 +644,8 @@ export function createBattle(room, map) {
     sim.towers.push(tower);
     player.tower = tower;
     sim.players.push(player);
-    const aiCfg = AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
     sim.ai[player.id] = {
+      cfg: aiCfg,
       think: aiCfg.think[0] + Math.random() * (aiCfg.think[1] - aiCfg.think[0]),
       spend: aiCfg.spend[0] + Math.random() * (aiCfg.spend[1] - aiCfg.spend[0]),
       patrol: 0,
@@ -692,6 +712,7 @@ export function applyBattleAction(sim, playerId, action) {
     case 'selectHero': {
       const own = player.heroes.find((h) => h.id === action.heroId);
       if (!own) return { ok: false, reason: '这不是你的英雄' };
+      for (const unit of player.heroes) unit.inputDir = null;
       player.selectedHeroId = own.id;
       syncSelected(player);
       return { ok: true };
@@ -701,6 +722,21 @@ export function applyBattleAction(sim, playerId, action) {
       if (!hero.alive) return { ok: false, reason: '英雄尚未复活' };
       hero.kite = !hero.kite;
       return { ok: true, kite: hero.kite };
+    }
+    case 'moveDir': {
+      if (!hero) return { ok: false, reason: '尚未召唤英雄' };
+      if (!hero.alive) return { ok: false, reason: '英雄尚未复活' };
+      let dx = Math.max(-1, Math.min(1, Number(action.dx) || 0));
+      let dy = Math.max(-1, Math.min(1, Number(action.dy) || 0));
+      const len = Math.hypot(dx, dy);
+      for (const unit of player.heroes) unit.inputDir = null;
+      if (len > 0.01) {
+        hero.inputDir = { x: dx / len, y: dy / len };
+        hero.path = [];
+        hero.target = null;
+        hero.chase = false;
+      }
+      return { ok: true };
     }
     case 'focusFire': {
       const target = entityById(sim, action.kind, action.id);
@@ -798,6 +834,7 @@ function manualAttackUnit(sim, player, unit, target, damageMult = MANUAL_ATTACK_
 }
 
 function commandMove(sim, hero, x, y) {
+  if (hero.inputDir) hero.inputDir = null;
   const path = findPathWorld(sim.map, hero.x, hero.y, x, y);
   hero.path = path;
   hero.target = null;
@@ -808,6 +845,7 @@ function commandMove(sim, hero, x, y) {
 
 function commandAttack(sim, hero, target) {
   if (!target || !target.alive) return false;
+  if (hero.inputDir) hero.inputDir = null;
   const same =
     hero.target && hero.target.kind === target.kind && hero.target.id === target.id;
   hero.target = { kind: target.kind, id: target.id };
@@ -1282,6 +1320,7 @@ function handleHeroDeath(sim, hero, source) {
   hero.target = null;
   hero.chase = false;
   hero.path = [];
+  hero.inputDir = null;
   hero.shield = 0;
   hero.deaths += 1;
   for (const unit of sim.summons) {
@@ -1375,6 +1414,7 @@ function eliminatePlayer(sim, player) {
     hero.hp = 0;
     hero.path = [];
     hero.target = null;
+    hero.inputDir = null;
   }
   for (const unit of sim.summons) {
     if (unit.alive && unit.owner === player.id) expireSummon(sim, unit, 'owner');
@@ -1502,7 +1542,7 @@ export function tickBattle(sim, dt) {
     if ((!p.hero || !p.hero.alive) && p.heroes.some((h) => h.alive)) {
       ensureAliveSelection(p);
     }
-    const aiCfg = AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
+    const aiCfg = ai.cfg || AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
     ai.think -= dt;
     ai.spend -= dt;
     if (ai.think <= 0) {
@@ -1515,11 +1555,11 @@ export function tickBattle(sim, dt) {
     }
   }
 
-  // AI 等效点击：只模拟 AI 当前操作英雄的点击，按难度 CPS 累积。
-  const aiClickCfg = AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
-  const aiCps = Math.max(1, aiClickCfg.cps || 5);
+  // AI 等效点击：只模拟 AI 当前操作英雄的点击，按每个 AI 自己的 CPS 累积。
   for (const p of sim.players) {
     if (!p.isAI || p.eliminated) continue;
+    const aiClickCfg = sim.ai[p.id]?.cfg || AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
+    const aiCps = Math.max(1, aiClickCfg.cps || 5);
     p.aiClickBudget = Math.min(1.2, (p.aiClickBudget || 0) + aiCps * dt);
     const hero = p.hero;
     if (!hero || !hero.alive) continue;
@@ -1547,6 +1587,20 @@ function scoreOf(p) {
   return p.kills * 160 + p.damageDealt * 0.35 + (heroEarned + towerEarned) * 0.08;
 }
 
+function moveHeroDirect(sim, hero, dx, dy, dt) {
+  const tile = worldToTile(sim.map, hero.x, hero.y);
+  const speed = hero.speed
+    * (hero.slowUntil > sim.time ? 1 - hero.slowFactor : 1)
+    * terrainSpeed(sim.map, tile.x, tile.y);
+  const step = Math.max(0, speed) * dt;
+  const nx = hero.x + dx * step;
+  const ny = hero.y + dy * step;
+  const tx = worldToTile(sim.map, nx, hero.y);
+  if (tilePassable(sim.map, tx.x, tx.y)) hero.x = nx;
+  const ty = worldToTile(sim.map, hero.x, ny);
+  if (tilePassable(sim.map, ty.x, ty.y)) hero.y = ny;
+}
+
 function updateHero(sim, hero, dt) {
   hero.attackCd = Math.max(0, hero.attackCd - dt);
   hero.skillCd = Math.max(0, hero.skillCd - dt);
@@ -1572,6 +1626,7 @@ function updateHero(sim, hero, dt) {
         hero.rootUntil = 0;
         hero.target = null;
         hero.path = [];
+        hero.inputDir = null;
         addEvent(sim, 'respawn', {
           x: hero.x,
           y: hero.y,
@@ -1601,6 +1656,15 @@ function updateHero(sim, hero, dt) {
   if (hero.target && (!target || !target.alive)) {
     hero.target = null;
     hero.chase = false;
+  }
+
+  // WASD/方向键：持续按住时由服务器直接推进，松开后停止。
+  if (hero.inputDir && !rooted) {
+    hero.path = [];
+    hero.target = null;
+    hero.chase = false;
+    moveHeroDirect(sim, hero, hero.inputDir.x, hero.inputDir.y, dt);
+    return;
   }
 
   if (target && target.alive) {
@@ -1806,7 +1870,7 @@ function aiThink(sim, p, ai) {
   const hero = p.hero;
   const tower = p.tower;
   if (!hero || !hero.alive) return;
-  const cfg = AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
+  const cfg = ai.cfg || AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
 
   const enemyHeroes = sim.heroes.filter((h) => h.alive && h.owner !== p.id);
   const enemyTowers = sim.towers.filter((t) => t.alive && t.owner !== p.id);
@@ -2030,7 +2094,7 @@ function aiMove(sim, p, x, y) {
   for (const clone of playerClones(sim, p)) commandMove(sim, clone, x, y);
 }
 
-function aiAttack(sim, p, target, cfg = AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal) {
+function aiAttack(sim, p, target, cfg = sim.ai[p.id]?.cfg || AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal) {
   if (!target || !target.alive) return;
   const units = cfg.focus ? p.heroes.filter((h) => h.alive) : [p.hero];
   for (const unit of units) {
@@ -2052,7 +2116,7 @@ function aiSpend(sim, p) {
   }
   let tower = p.tower;
   let hero = p.hero;
-  const cfg = AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
+  const cfg = sim.ai[p.id]?.cfg || AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
   const reserve = hero ? HEROES[hero.heroId].skill.cost : 0;
 
   // AI 有余钱时扩建魂塔，选择尚未拥有的英雄

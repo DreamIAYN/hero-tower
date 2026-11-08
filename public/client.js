@@ -263,6 +263,7 @@ const app = {
   focusMark: null,
   tutorial: { active: false, step: 0, moved: false, focusUsed: false, skillUsed: false, pausedSeen: false, dismissed: false, code: null },
   skillAim: null,
+  wasd: new Set(),
   lastPointerType: null,
   mobile: false,
   mobilePanelOpen: true,
@@ -309,6 +310,7 @@ function init() {
   resizeCanvas();
   new ResizeObserver(() => resizeCanvas()).observe(els.stage);
   requestAnimationFrame(frame);
+  setInterval(() => { if (app.wasd.size) sendWasd(); }, 120);
 
   const saved = readSession();
   if (saved) {
@@ -600,6 +602,7 @@ function handleState(state) {
 }
 
 async function togglePause() {
+  clearWasd();
   const state = app.state;
   const me = myPlayer();
   if (!state || state.phase !== 'battle' || !state.canPause) {
@@ -1011,11 +1014,11 @@ function bindEvents() {
   });
 
   window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+  window.addEventListener('blur', () => clearWasd());
   window.addEventListener('beforeunload', () => closeStream());
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && app.connected) {
-      /* EventSource keeps the stream alive; nothing to do */
-    }
+    if (document.hidden) clearWasd();
   });
 }
 
@@ -1162,6 +1165,7 @@ async function joinRoom() {
 }
 
 function beginConnect(code, playerId) {
+  app.wasd.clear();
   app.connecting = true;
   app.spectator = false;
   stopReplayLoop();
@@ -1190,6 +1194,7 @@ function beginConnect(code, playerId) {
 
 function showStart() {
   clearRecoveryProbe();
+  app.wasd.clear();
   closeStream();
   stopReplayLoop();
   app.spectator = false;
@@ -1256,6 +1261,7 @@ function exitCurrentGame() {
 }
 
 function leaveRoom() {
+  clearWasd(false);
   const code = app.code;
   const playerId = app.playerId;
   if (code && playerId && !app.spectator) {
@@ -2658,6 +2664,7 @@ function onPointerMove(e) {
 
 function onCanvasDown(e) {
   if (e.button !== 0) return;
+  if (app.wasd.size) clearWasd();
   if (!app.state) return;
   const phase = app.state.phase;
   if (app.state.paused) return;
@@ -2777,6 +2784,19 @@ function onKeyDown(e) {
     }
     return;
   }
+  const wasd = wasdKeyName(e.key);
+  if (wasd) {
+    if (e.repeat) {
+      e.preventDefault();
+      return;
+    }
+    if (!app.state || app.state.phase !== 'battle' || app.state.paused || app.state.over) return;
+    e.preventDefault();
+    app.wasd.add(wasd);
+    sendWasd();
+    return;
+  }
+
   if (e.key === 'Escape') {
     if (!els.altarModal.classList.contains('hidden')) {
       closeAltar();
@@ -2821,6 +2841,47 @@ function onKeyDown(e) {
   if (e.key.toLowerCase() === 'q' && !e.repeat) {
     if (!els.helpModal.classList.contains('hidden')) return;
     castSkillAtCursor();
+  }
+}
+
+const WASD_NAMES = {
+  w: 'w', a: 'a', s: 's', d: 'd',
+  arrowup: 'w', arrowleft: 'a', arrowdown: 's', arrowright: 'd',
+};
+
+function wasdKeyName(key) {
+  return WASD_NAMES[String(key || '').toLowerCase()] || null;
+}
+
+function wasdVector() {
+  let x = 0;
+  let y = 0;
+  if (app.wasd.has('a')) x -= 1;
+  if (app.wasd.has('d')) x += 1;
+  if (app.wasd.has('w')) y -= 1;
+  if (app.wasd.has('s')) y += 1;
+  return { x, y };
+}
+
+function sendWasd() {
+  const state = app.state;
+  if (!state || state.phase !== 'battle' || state.paused || state.over || app.spectator || app.replayMode) return;
+  const v = wasdVector();
+  sendAction({ type: 'moveDir', dx: v.x, dy: v.y }, { silent: true });
+}
+
+function clearWasd(send = true) {
+  if (!app.wasd?.size) return;
+  app.wasd.clear();
+  if (send) sendWasd();
+}
+
+function onKeyUp(e) {
+  const wasd = wasdKeyName(e.key);
+  if (!wasd) return;
+  if (app.wasd.delete(wasd)) {
+    e.preventDefault();
+    sendWasd();
   }
 }
 
