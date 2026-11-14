@@ -74,6 +74,8 @@ const els = {
   mobileAttack: $('#mobile-attack'),
   phasePill: $('#phase-pill'),
   timerPill: $('#timer-pill'),
+  attackModePill: $('#attack-mode-pill'),
+  mapInputHint: $('#map-input-hint'),
   roomPill: $('#room-pill'),
   connDot: $('#conn-dot'),
   connText: $('#conn-text'),
@@ -90,6 +92,7 @@ const els = {
   replaySeek: $('#replay-seek'),
   replayTime: $('#replay-time'),
   replaySpeed: $('#replay-speed'),
+  replayExport: $('#replay-export'),
   replayExit: $('#replay-exit'),
   pauseOverlay: $('#pause-overlay'),
   pauseResumeBtn: $('#pause-resume-btn'),
@@ -194,6 +197,7 @@ const els = {
   codeInput: $('#code-input'),
   joinBtn: $('#join-btn'),
   startAiLevel: $('#start-ai-level'),
+  startAttackMode: $('#start-attack-mode'),
   startMapSize: $('#start-map-size'),
   startTeamMode: $('#start-team-mode'),
   startPlayers: $('#start-players'),
@@ -204,6 +208,7 @@ const els = {
   lobbySlots: $('#lobby-slots'),
   slotChoice: $('#slot-choice'),
   lobbyAiLevel: $('#lobby-ai-level'),
+  lobbyAttackMode: $('#lobby-attack-mode'),
   lobbyMapSize: $('#lobby-map-size'),
   lobbyTeamMode: $('#lobby-team-mode'),
   lobbySideMode: $('#lobby-side-mode'),
@@ -284,11 +289,13 @@ const app = {
   mobile: false,
   mobilePanelOpen: true,
   _restarting: false,
+  autoModeHintShown: false,
   lobbySig: '',
   announceTimer: 0,
   toastCount: 0,
   lastAutoMsg: 0,
   aiLevel: 'normal',
+  attackMode: 'manual',
   mapSize: 'standard',
   teamMode: 'ffa',
   maxPlayers: 4,
@@ -301,6 +308,7 @@ const app = {
 const sessionKey = 'tower-souls-session-v1';
 const nameKey = 'tower-souls-name-v1';
 const aiLevelKey = 'tower-souls-ai-level-v1';
+const attackModeKey = 'tower-souls-attack-mode-v1';
 const mapSizeKey = 'tower-souls-map-size-v1';
 const teamModeKey = 'tower-souls-team-mode-v1';
 const playersKey = 'tower-souls-players-v1';
@@ -318,6 +326,7 @@ function init() {
   buildMapCanvas(app.demoMap);
   els.nameInput.value = localStorage.getItem(nameKey) || randomName();
   app.aiLevel = readAILevelPreference();
+  app.attackMode = readAttackModePreference();
   app.mapSize = readMapSizePreference();
   app.teamMode = readTeamModePreference();
   app.maxPlayers = readPlayersPreference();
@@ -965,6 +974,13 @@ function bindEvents() {
     try { localStorage.setItem(aiLevelKey, app.aiLevel); } catch { /* noop */ }
     updateAILevelButtons();
   });
+  els.startAttackMode.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-attack-mode]');
+    if (!btn) return;
+    app.attackMode = btn.dataset.attackMode === 'auto' ? 'auto' : 'manual';
+    try { localStorage.setItem(attackModeKey, app.attackMode); } catch { /* noop */ }
+    updateModeButtons();
+  });
   els.startMapSize.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-map-size]');
     if (!btn) return;
@@ -985,6 +1001,11 @@ function bindEvents() {
     app.maxPlayers = Number(btn.dataset.players) || 4;
     try { localStorage.setItem(playersKey, String(app.maxPlayers)); } catch { /* noop */ }
     updateModeButtons();
+  });
+  els.lobbyAttackMode.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-attack-mode]');
+    if (!btn || !isHost()) return;
+    sendAction({ type: 'setManualAttack', value: btn.dataset.attackMode !== 'auto' }, { silent: true });
   });
   els.lobbyMapSize.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-map-size]');
@@ -1027,6 +1048,7 @@ function bindEvents() {
   els.replayListClose.addEventListener('click', closeReplayList);
   els.replayPlay.addEventListener('click', toggleReplayPlay);
   els.replaySpeed.addEventListener('click', cycleReplaySpeed);
+  els.replayExport.addEventListener('click', toggleReplayExport);
   els.replayExit.addEventListener('click', closeReplay);
   els.replaySeek.addEventListener('input', seekReplay);
   els.pauseResumeBtn.addEventListener('click', togglePause);
@@ -1181,6 +1203,9 @@ function updateAILevelButtons() {
 }
 
 function updateModeButtons() {
+  for (const btn of $$('#start-attack-mode button')) {
+    btn.classList.toggle('active', btn.dataset.attackMode === app.attackMode);
+  }
   for (const btn of $$('#start-map-size button')) {
     btn.classList.toggle('active', btn.dataset.mapSize === app.mapSize);
   }
@@ -1193,13 +1218,22 @@ function updateModeButtons() {
   const names = { easy: '休闲', normal: '标准', hard: '困难', nightmare: '噩梦' };
   const maps = { standard: '标准图', large: '大地图', xlarge: '超大图' };
   const modes = { ffa: '自由混战', teams: teamModeLabel() };
+  const attackName = app.attackMode === 'auto' ? '自动战斗' : '手速模式';
   const small = els.quickBtn?.querySelector('small');
-  if (small) small.textContent = `你 + ${Math.max(1, app.maxPlayers - 1)} 名 AI · ${names[app.aiLevel] || '标准'} · ${maps[app.mapSize] || '标准图'} · ${modes[app.teamMode] || '自由混战'}`;
+  if (small) small.textContent = `你 + ${Math.max(1, app.maxPlayers - 1)} 名 AI · ${names[app.aiLevel] || '标准'} · ${maps[app.mapSize] || '标准图'} · ${modes[app.teamMode] || '自由混战'} · ${attackName}`;
 }
 
 function teamModeLabel(max = app.maxPlayers) {
   if (app.teamMode !== 'teams') return '自由混战';
   return `团队 ${Math.max(1, Math.floor(max / 2))}v${Math.max(1, Math.floor(max / 2))}`;
+}
+
+function readAttackModePreference() {
+  try {
+    const v = localStorage.getItem(attackModeKey);
+    if (v === 'manual' || v === 'auto') return v;
+  } catch { /* noop */ }
+  return 'manual';
 }
 
 function readMapSizePreference() {
@@ -1230,7 +1264,7 @@ async function quickPlay() {
   clearStartError();
   startBusy(els.quickBtn, '正在集结 AI…');
   try {
-    const data = await api('/api/quick', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode, maxPlayers: app.maxPlayers });
+    const data = await api('/api/quick', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode, maxPlayers: app.maxPlayers, manualAttack: app.attackMode !== 'auto' });
     if (!data.ok) {
       showStartError(data.error || '创建失败');
       return;
@@ -1265,7 +1299,7 @@ async function startSpectate() {
   clearStartError();
   startBusy(els.spectateAiBtn, '正在创建观战局…');
   try {
-    const data = await api('/api/spectate', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode, maxPlayers: app.maxPlayers });
+    const data = await api('/api/spectate', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode, maxPlayers: app.maxPlayers, manualAttack: app.attackMode !== 'auto' });
     if (!data.ok) {
       showStartError(data.error || '观战房间创建失败');
       return;
@@ -1284,7 +1318,7 @@ async function createRoom() {
   clearStartError();
   startBusy(els.createBtn, '创建中…');
   try {
-    const data = await api('/api/create', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode, maxPlayers: app.maxPlayers });
+    const data = await api('/api/create', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode, maxPlayers: app.maxPlayers, manualAttack: app.attackMode !== 'auto' });
     if (!data.ok) {
       showStartError(data.error || '创建失败');
       return;
@@ -1381,6 +1415,7 @@ function showStart() {
   app.shake = 0;
   app.battleStartedAt = 0;
   app.seenEventId = 0;
+  app.autoModeHintShown = false;
   els.app.classList.remove('in-room');
   els.app.classList.add('no-room');
   if (!app.map && app.demoMap) buildMapCanvas(app.demoMap);
@@ -1598,6 +1633,19 @@ function updateHeader() {
     timer = '等待';
   }
   els.timerPill.textContent = timer;
+  const manual = isManualAttackMode();
+  if (els.attackModePill) {
+    els.attackModePill.className = `status-pill ${manual ? '' : 'draft'}`;
+    els.attackModePill.querySelector('b').textContent = manual ? '手速' : '自动';
+    els.attackModePill.title = manual
+      ? '手速模式：点击敌人立即追加手动攻击'
+      : '自动战斗：点击敌人只追击，伤害由自动攻击结算';
+  }
+  if (els.mapInputHint) {
+    els.mapInputHint.innerHTML = manual
+      ? '<kbd>WASD</kbd> / 左键 移动 · 右键拖动地图 · 滚轮缩放 · 点英雄选中 · 连点敌人立即攻击'
+      : '<kbd>WASD</kbd> / 左键 移动 · 右键拖动地图 · 滚轮缩放 · 点英雄选中 · 自动战斗：点击敌人只追击';
+  }
   els.roomPill.querySelector('b').textContent = app.code || '----';
 }
 
@@ -1608,6 +1656,12 @@ function updateConnection(on) {
 
 function isHost() {
   return !!(app.state && app.state.hostId === app.playerId);
+}
+function isManualAttackMode() {
+  if (app.replayMode) return app.replay?.data?.manualAttack !== false;
+  if (app.state?.manualAttack === false) return false;
+  if (app.state?.battle?.manualAttack === false) return false;
+  return true;
 }
 
 function myPlayer() {
@@ -2142,7 +2196,7 @@ function updateLobbyUI() {
   els.lobbyCode.textContent = app.code || '----';
   const host = state.hostId === app.playerId;
   const sorted = [...state.players].sort((a, b) => a.slot - b.slot);
-  const sig = `${state.maxPlayers}|${state.mapSize}|${state.teamMode}|${sorted.map((p) => `${p.id}:${p.name}:${p.connected}:${p.team}`).join(',')}|${state.hostId}`;
+  const sig = `${state.maxPlayers}|${state.mapSize}|${state.teamMode}|${state.manualAttack !== false}|${sorted.map((p) => `${p.id}:${p.name}:${p.connected}:${p.team}`).join(',')}|${state.hostId}`;
   if (sig !== app.lobbySig) {
     app.lobbySig = sig;
     const slots = [];
@@ -2179,6 +2233,10 @@ function updateLobbyUI() {
     btn.classList.toggle('active', btn.dataset.aiLevel === (state.aiLevel || 'normal'));
     btn.disabled = !host;
   }
+  for (const btn of $$('#lobby-attack-mode button')) {
+    btn.classList.toggle('active', (btn.dataset.attackMode === 'auto') === (state.manualAttack === false));
+    btn.disabled = !host;
+  }
   for (const btn of $$('#lobby-map-size button')) {
     btn.classList.toggle('active', btn.dataset.mapSize === (state.mapSize || 'standard'));
     btn.disabled = !host;
@@ -2196,11 +2254,12 @@ function updateLobbyUI() {
   const levelName = { easy: '休闲', normal: '标准', hard: '困难', nightmare: '噩梦' }[state.aiLevel || 'normal'] || '标准';
   const mapName = state.mapSize === 'xlarge' ? '超大图 128×96' : state.mapSize === 'large' ? '大地图 96×72' : '标准图 40×30';
   const modeName = state.teamMode === 'teams' ? `团队 ${Math.max(1, Math.floor(state.maxPlayers / 2))}v${Math.max(1, Math.floor(state.maxPlayers / 2))}` : '自由混战';
+  const attackName = state.manualAttack === false ? '自动战斗' : '手速模式';
   els.lobbyNote.textContent = host
-    ? `${mapName} · ${modeName} · AI 难度：${levelName}。把房间号发给朋友，或者直接开始让 AI 加入战局。`
-    : `房主开始后，所有玩家进入魂塔部署阶段。${mapName} · ${modeName} · AI 难度：${levelName}。`;
+    ? `${mapName} · ${modeName} · ${attackName} · AI 难度：${levelName}。把房间号发给朋友，或者直接开始让 AI 加入战局。`
+    : `房主开始后，所有玩家进入魂塔部署阶段。${mapName} · ${modeName} · ${attackName} · AI 难度：${levelName}。`;
   els.lobbySideSlots.textContent = `${state.players.length} / ${state.maxPlayers}`;
-  if (els.lobbySideMode) els.lobbySideMode.textContent = modeName;
+  if (els.lobbySideMode) els.lobbySideMode.textContent = `${modeName} · ${attackName}`;
   els.lobbySideText.textContent = host ? '你可以调整人数、地图和模式，空位会自动由 AI 补足。' : '等待房主调整设置并开始战斗。';
 }
 
@@ -2795,6 +2854,15 @@ function findNearestEnemy(hero) {
   return best;
 }
 
+function sendAttackCommand(target) {
+  const manual = isManualAttackMode();
+  if (!manual && !app.autoModeHintShown) {
+    app.autoModeHintShown = true;
+    showToast('自动战斗模式：点击敌人只用于追击，伤害由自动攻击结算', 'gold', 2600);
+  }
+  return sendAction({ type: 'attack', kind: target.kind, id: target.id, manual }, { silent: true });
+}
+
 function mobileAttackOnce() {
   const state = app.state;
   if (!state || state.phase !== 'battle' || state.paused || app.mobilePanelOpen) return;
@@ -2802,7 +2870,7 @@ function mobileAttackOnce() {
   if (!hero || !hero.alive || myPlayer()?.eliminated) return;
   const target = findNearestEnemy(hero);
   if (!target) return false;
-  sendAction({ type: 'attack', kind: target.kind, id: target.id, manual: true }, { silent: true });
+  sendAttackCommand(target);
   return true;
 }
 
@@ -2813,7 +2881,7 @@ function startMobileAttack(e) {
   els.mobileAttack.setPointerCapture?.(e.pointerId);
   els.mobileAttack.classList.add('pressed');
   if (!mobileAttackOnce()) showToast('附近没有可攻击目标', '', 1000);
-  app.mobileAttackTimer = setInterval(mobileAttackOnce, 95);
+  if (isManualAttackMode()) app.mobileAttackTimer = setInterval(mobileAttackOnce, 95);
 }
 
 function stopMobileAttack() {
@@ -3021,8 +3089,8 @@ function performCanvasClick(e) {
       });
       return;
     }
-    // 每一次点击都立即尝试一次手动攻击，高 CPS 可以追加输出。
-    sendAction({ type: 'attack', kind: clicked.kind, id: clicked.id, manual: true }, { silent: true });
+    // 手速模式：每次点击立即尝试一次手动攻击；自动战斗模式只下达追击指令。
+    sendAttackCommand(clicked);
     return;
   }
 
@@ -4672,7 +4740,7 @@ async function loadReplayList() {
         (r) => `
         <button class="replay-list-item" data-replay-id="${esc(r.id)}">
           <span class="rl-main">
-            <b>${esc(r.winner ? `${r.winner} 获胜` : '平局')} · 房间 ${esc(r.code)}</b>
+            <b>${esc(r.winner ? `${r.winner} 获胜` : '平局')} · 房间 ${esc(r.code)} · ${r.manualAttack === false ? '自动战斗' : '手速模式'}</b>
             <small>${esc((r.players || []).join(' / '))}</small>
           </span>
           <span class="rl-meta">${fmtTime(r.duration || 0)}<br>${esc(fmtReplayDate(r.endedAt))}</span>
@@ -4724,6 +4792,7 @@ function replayFrameAt(time) {
     code: app.replay.data.code,
     hostId: null,
     aiLevel: app.replay.data.aiLevel || 'normal',
+    manualAttack: app.replay.data.manualAttack !== false,
     maxPlayers: a.players.length,
     players: a.players,
     battle: {
@@ -4736,6 +4805,7 @@ function replayFrameAt(time) {
       deathMode: !!a.deathMode,
       deathModeAt: a.deathModeAt || 0,
       teamMode: !!a.teamMode,
+      manualAttack: app.replay.data.manualAttack !== false,
       winnerTeam: a.winnerTeam ?? null,
       players: a.players,
       heroes: blend('heroes'),
@@ -4789,6 +4859,17 @@ function updateReplayBar() {
   els.replayTime.textContent = `${fmtTime(r.time)} / ${fmtTime(r.duration)}`;
   els.replayPlay.textContent = r.playing ? 'Ⅱ' : '▶';
   els.replaySpeed.textContent = `${r.speed}x`;
+  if (app.replayExport) {
+    els.replayPlay.disabled = true;
+    els.replaySeek.disabled = true;
+    els.replaySpeed.disabled = true;
+    els.replayExit.disabled = true;
+  } else {
+    els.replayPlay.disabled = false;
+    els.replaySeek.disabled = false;
+    els.replaySpeed.disabled = false;
+    els.replayExit.disabled = false;
+  }
 }
 
 function startReplayLoop() {
@@ -4819,7 +4900,7 @@ function stopReplayLoop() {
 
 function toggleReplayPlay() {
   const r = app.replay;
-  if (!r) return;
+  if (!r || app.replayExport) return;
   if (r.time >= r.duration - 0.01) setReplayTime(0, true);
   r.playing = !r.playing;
   updateReplayBar();
@@ -4827,15 +4908,179 @@ function toggleReplayPlay() {
 
 function cycleReplaySpeed() {
   const r = app.replay;
-  if (!r) return;
+  if (!r || app.replayExport) return;
   r.speed = r.speed === 1 ? 2 : r.speed === 2 ? 4 : 1;
   updateReplayBar();
 }
 
 function seekReplay() {
   const r = app.replay;
-  if (!r) return;
+  if (!r || app.replayExport) return;
   setReplayTime(Number(els.replaySeek.value) || 0);
+}
+
+function replayExportMime() {
+  const candidates = [
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4;codecs=avc1',
+    'video/mp4',
+  ];
+  for (const type of candidates) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(type)) return type;
+  }
+  return '';
+}
+
+function toggleReplayExport() {
+  if (app.replayExport) {
+    cancelReplayExport();
+    return;
+  }
+  const r = app.replay;
+  if (!app.replayMode || !r) return;
+  if (!window.MediaRecorder || !els.canvas.captureStream) {
+    showToast('当前浏览器不支持 Canvas 录制，请使用 Chrome/Edge', 'error', 2600);
+    return;
+  }
+  const mime = replayExportMime();
+  if (!mime) {
+    showToast('当前浏览器不支持 MP4 录制，请使用 Chrome/Edge', 'error', 3000);
+    return;
+  }
+  let stream;
+  try {
+    stream = els.canvas.captureStream(30);
+  } catch {
+    showToast('无法创建录制流', 'error', 2200);
+    return;
+  }
+  const chunks = [];
+  let recorder;
+  try {
+    recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 4_000_000 });
+  } catch {
+    showToast('MP4 录制初始化失败，请尝试 Chrome/Edge', 'error', 2600);
+    stream.getTracks().forEach((t) => t.stop());
+    return;
+  }
+  const original = { time: r.time, playing: r.playing, speed: r.speed };
+  r.speed = 1;
+  r.playing = false;
+  setReplayTime(0, true);
+  const exportState = app.replayExport = {
+    recorder,
+    stream,
+    chunks,
+    mime,
+    original,
+    raf: 0,
+    stopped: false,
+    canceled: false,
+  };
+  recorder.onstart = () => {
+    r.playing = true;
+    updateReplayBar();
+  };
+  recorder.ondataavailable = (ev) => {
+    if (ev.data && ev.data.size) chunks.push(ev.data);
+  };
+  recorder.onerror = () => {
+    showToast('MP4 录制失败', 'error', 2600);
+    cancelReplayExport();
+  };
+  recorder.onstop = () => {
+    if (exportState.canceled) {
+      stream.getTracks().forEach((track) => track.stop());
+      app.replayExport = null;
+      els.replayExport.classList.remove('exporting');
+      els.replayExport.textContent = '导出 MP4';
+      updateReplayBar();
+      return;
+    }
+    const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob(chunks, { type: mime.split(';')[0] });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tower-souls-${app.replay?.data?.code || 'replay'}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    stream.getTracks().forEach((track) => track.stop());
+    const current = app.replay;
+    if (current) {
+      current.speed = original.speed;
+      current.playing = original.playing;
+      setReplayTime(current.time, true);
+      updateReplayBar();
+    }
+    app.replayExport = null;
+    els.replayExport.classList.remove('exporting');
+    els.replayExport.textContent = '导出 MP4';
+    updateReplayBar();
+    showToast(`MP4 已生成（${fmtTime(r.duration)}）`, 'gold', 2600);
+  };
+  els.replayExport.classList.add('exporting');
+  els.replayExport.textContent = '取消导出';
+  updateReplayBar();
+  showToast('开始按 1× 实时录制 MP4（无声）；可再次点击取消', 'gold', 2600);
+  recorder.start(250);
+  const monitor = () => {
+    if (!app.replayExport) return;
+    const cur = app.replay;
+    if (!cur) {
+      cancelReplayExport();
+      return;
+    }
+    const pct = Math.min(100, Math.round((cur.time / Math.max(0.1, cur.duration)) * 100));
+    els.replayExport.textContent = `导出中 ${pct}%`;
+    updateReplayBar();
+    if (cur.time >= cur.duration - 0.02) {
+      finishReplayExport();
+      return;
+    }
+    app.replayExport.raf = requestAnimationFrame(monitor);
+  };
+  app.replayExport.raf = requestAnimationFrame(monitor);
+}
+
+function finishReplayExport() {
+  const e = app.replayExport;
+  if (!e || e.stopped) return;
+  e.stopped = true;
+  if (e.raf) cancelAnimationFrame(e.raf);
+  try {
+    if (e.recorder.state !== 'inactive') e.recorder.stop();
+  } catch {
+    /* noop */
+  }
+}
+
+function cancelReplayExport() {
+  const e = app.replayExport;
+  if (!e) return;
+  e.stopped = true;
+  e.canceled = true;
+  if (e.raf) cancelAnimationFrame(e.raf);
+  const current = app.replay;
+  if (current) {
+    current.speed = e.original.speed;
+    current.playing = e.original.playing;
+    setReplayTime(e.original.time, true);
+    updateReplayBar();
+  }
+  try {
+    if (e.recorder.state !== 'inactive') e.recorder.stop();
+  } catch {
+    /* noop */
+  }
+  e.stream.getTracks().forEach((track) => track.stop());
+  app.replayExport = null;
+  els.replayExport.classList.remove('exporting');
+  els.replayExport.textContent = '导出 MP4';
+  updateReplayBar();
+  showToast('已取消导出', '', 1600);
 }
 
 async function openReplay(id) {
@@ -4908,6 +5153,7 @@ async function openReplay(id) {
 }
 
 function closeReplay() {
+  if (app.replayExport) cancelReplayExport();
   stopReplayLoop();
   app.replayMode = false;
   app.replay = null;

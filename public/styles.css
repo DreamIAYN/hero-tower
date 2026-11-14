@@ -3332,6 +3332,15 @@ button {
   text-align: center;
   white-space: nowrap;
 }
+.replay-export {
+  border-color: rgba(255, 207, 107, 0.38);
+  color: var(--gold);
+  white-space: nowrap;
+}
+.replay-export.exporting {
+  border-color: rgba(255, 107, 97, 0.5);
+  color: var(--red);
+}
 .replay-exit {
   border-color: rgba(255, 107, 97, 0.35);
   color: var(--red);
