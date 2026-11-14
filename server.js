@@ -196,6 +196,7 @@ function snapshotRoom(room) {
     aiLevel: room.aiLevel || 'normal',
     mapSize: room.mapSize || 'standard',
     teamMode: room.teamMode || 'ffa',
+    manualAttack: room.manualAttack !== false,
     players: room.players.map((p) => ({ ...p })),
     spectators: [...(room.spectators || new Map()).values()].map((p) => ({ ...p })),
     map: room.map,
@@ -262,6 +263,7 @@ function hydrateRoom(saved) {
   if (!AI_LEVELS[room.aiLevel]) room.aiLevel = 'normal';
   if (!['standard', 'large', 'xlarge'].includes(room.mapSize)) room.mapSize = 'standard';
   if (room.teamMode !== 'teams') room.teamMode = 'ffa';
+  room.manualAttack = room.manualAttack !== false;
   room.players.forEach((p) => {
     p.team = room.teamMode === 'teams' ? p.slot % 2 : null;
     p.connected = !!p.isAI;
@@ -348,6 +350,7 @@ function createRoom(maxPlayers = 4, aiLevel = 'normal', options = {}) {
   const code = newRoomCode();
   const mapSize = options.mapSize === 'xlarge' ? 'xlarge' : options.mapSize === 'large' ? 'large' : 'standard';
   const teamMode = options.teamMode === 'teams' ? 'teams' : 'ffa';
+  const manualAttack = options.manualAttack !== false;
   const room = {
     code,
     createdAt: Date.now(),
@@ -357,6 +360,7 @@ function createRoom(maxPlayers = 4, aiLevel = 'normal', options = {}) {
     aiLevel: AI_LEVELS[aiLevel] ? aiLevel : 'normal',
     mapSize,
     teamMode,
+    manualAttack,
     maxPlayers: [2, 4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4,
     players: [],
     spectators: new Map(),
@@ -669,6 +673,7 @@ function roomState(room, consumeEvents = true) {
     aiLevel: room.aiLevel || 'normal',
     mapSize: room.mapSize || 'standard',
     teamMode: room.teamMode || 'ffa',
+    manualAttack: room.manualAttack !== false,
     maxPlayers: room.maxPlayers,
     serverNow: now,
     players: roomPlayersPublic(room, battle),
@@ -720,6 +725,7 @@ function initPayload(room, player) {
     playerId: player.id,
     isHost: room.hostId === player.id,
     spectator: !!player.isSpectator,
+    manualAttack: room.manualAttack !== false,
     map: room.map,
     catalog: gameCatalog(),
   };
@@ -816,6 +822,7 @@ function startReplay(room) {
     code: room.code,
     createdAt: Date.now(),
     aiLevel: room.aiLevel || 'normal',
+    manualAttack: room.manualAttack !== false,
     map: room.map,
     players: room.sim.players.map((p) => ({
       id: p.id,
@@ -874,6 +881,7 @@ function replayMeta(replay, result, bytes = 0) {
     endedAt: Date.now(),
     duration: replay.frames.length ? replay.frames[replay.frames.length - 1].t : 0,
     aiLevel: replay.aiLevel,
+    manualAttack: replay.manualAttack !== false,
     winner: result?.winnerName || null,
     reason: result?.reason || null,
     players: replay.players.map((p) => p.name),
@@ -914,6 +922,7 @@ async function finalizeReplay(room) {
     createdAt: replay.createdAt,
     endedAt: Date.now(),
     aiLevel: replay.aiLevel,
+    manualAttack: replay.manualAttack !== false,
     duration: replay.frames.length ? replay.frames[replay.frames.length - 1].t : 0,
     players: replay.players,
     result: room.result,
@@ -1038,6 +1047,13 @@ function handleAction(room, player, action) {
       if (room.hostId !== player.id) return { ok: false, error: '只有房主可以修改队伍模式' };
       room.teamMode = action.value === 'teams' ? 'teams' : 'ffa';
       for (const p of room.players) p.team = teamForSlot(room, p.slot);
+      broadcast(room, true);
+      return { ok: true };
+    }
+    case 'setManualAttack': {
+      if (room.phase !== 'lobby') return { ok: false, error: '开局后不能修改攻击模式' };
+      if (room.hostId !== player.id) return { ok: false, error: '只有房主可以修改攻击模式' };
+      room.manualAttack = action.value !== false;
       broadcast(room, true);
       return { ok: true };
     }
@@ -1240,7 +1256,7 @@ async function handleApi(req, res, pathname, query) {
   }
 
   if (pathname === '/api/create') {
-    const room = createRoom(Number(body.maxPlayers) || 4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
+    const room = createRoom(Number(body.maxPlayers) || 4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode, manualAttack: body.manualAttack });
     const added = addHuman(room, body.name);
     if (added.error) {
       json(res, 400, { error: added.error });
@@ -1251,7 +1267,7 @@ async function handleApi(req, res, pathname, query) {
   }
 
   if (pathname === '/api/quick') {
-    const room = createRoom(Number(body.maxPlayers) || 4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
+    const room = createRoom(Number(body.maxPlayers) || 4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode, manualAttack: body.manualAttack });
     const added = addHuman(room, body.name);
     if (added.error) {
       json(res, 400, { error: added.error });
@@ -1277,7 +1293,7 @@ async function handleApi(req, res, pathname, query) {
   }
 
   if (pathname === '/api/spectate') {
-    const room = createRoom(Number(body.maxPlayers) || 4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
+    const room = createRoom(Number(body.maxPlayers) || 4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode, manualAttack: body.manualAttack });
     fillAI(room);
     const spectator = addSpectator(room, body.name);
     startDraft(room);

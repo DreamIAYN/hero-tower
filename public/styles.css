@@ -3561,3 +3561,6 @@ button {
 @media (max-width: 720px) {
   #minimap { width: 112px; height: 81px; top: 8px; right: 8px; }
 }
+
+.mode-note { margin: -2px 0 8px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.mode-note strong { color: var(--cyan); }

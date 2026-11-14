@@ -3570,6 +3570,9 @@ button {
   #minimap { width: 112px; height: 81px; top: 8px; right: 8px; }
 }
 
+.mode-note { margin: -2px 0 8px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.mode-note strong { color: var(--cyan); }
+
 
 .start-row, #join-form, #tutorial-btn, #spectate-ai-btn, #replay-list-btn { display: none !important; }
 .offline-badge {
@@ -3878,7 +3881,7 @@ button {
             用点击与手速撕开战场。
           </p>
 
-          <div class="offline-badge"><b>离线单机版</b><span>作者 DeepSeek · 无需联网 · 4 / 6 / 8 人 · AI 陪玩</span></div>
+          <div class="offline-badge"><b>离线单机版</b><span>作者 DeepSeek · 无需联网 · 2 / 4 / 6 / 8 人 · 1v1 / AI 陪玩</span></div>
             <div class="start-panel">
             <label for="name-input">你的称号</label>
             <input id="name-input" maxlength="12" autocomplete="off" placeholder="输入称号" value="" />
@@ -3913,9 +3916,11 @@ button {
                 <button type="button" data-attack-mode="auto">自动战斗</button>
               </div>
             </div>
+            <p class="mode-note" id="attack-mode-note">手速模式：点击敌人追加手动伤害</p>
             <div class="ai-level-picker">
               <span>人数</span>
               <div class="ai-level-options" id="start-players">
+                <button type="button" data-players="2">2 人</button>
                 <button type="button" data-players="4" class="active">4 人</button>
                 <button type="button" data-players="6">6 人</button>
                 <button type="button" data-players="8">8 人</button>
@@ -8361,7 +8366,7 @@ window.TowerOffline = { heroes, mapgen, engine };
 
   let roomMap = null;
 
-  function createQuick(name, aiLevel, mapSize, teamMode, maxPlayers = 4) {
+  function createQuick(name, aiLevel, mapSize, teamMode, maxPlayers = 4, manualAttack = true) {
     const size = mapSize === 'xlarge' ? 'xlarge' : mapSize === 'large' ? 'large' : 'standard';
     const mode = teamMode === 'teams' ? 'teams' : 'ffa';
     roomMap = generateMap(undefined, { size });
@@ -8370,10 +8375,11 @@ window.TowerOffline = { heroes, mapgen, engine };
       code: newCode(),
       createdAt: Date.now(),
       hostId: 'offline-human',
-      maxPlayers: [4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4,
+      maxPlayers: [2, 4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4,
       aiLevel: level,
       mapSize: size,
       teamMode: mode,
+      manualAttack: manualAttack !== false,
       map: roomMap,
       phase: 'draft',
       paused: false,
@@ -8383,7 +8389,7 @@ window.TowerOffline = { heroes, mapgen, engine };
       result: null,
       lastTick: Date.now(),
       lastBroadcast: 0,
-      players: makePlayers(name, mode, [4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4),
+      players: makePlayers(name, mode, [2, 4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4),
     };
     streams.clear();
     if (!timer) timer = setInterval(loop, 33);
@@ -8428,6 +8434,7 @@ window.TowerOffline = { heroes, mapgen, engine };
         aiLevel: room.aiLevel,
         mapSize: room.mapSize,
         teamMode: room.teamMode,
+        manualAttack: room.manualAttack !== false,
         maxPlayers: room.maxPlayers,
         serverNow: Date.now(),
         players: room.players.map(draftPlayer),
@@ -8455,6 +8462,7 @@ window.TowerOffline = { heroes, mapgen, engine };
       aiLevel: room.aiLevel,
       mapSize: room.mapSize,
       teamMode: room.teamMode,
+      manualAttack: room.manualAttack !== false,
       maxPlayers: room.maxPlayers,
       serverNow: Date.now(),
       players: battle ? battle.players : [],
@@ -8474,6 +8482,7 @@ window.TowerOffline = { heroes, mapgen, engine };
       playerId: 'offline-human',
       isHost: true,
       spectator: false,
+      manualAttack: room?.manualAttack !== false,
       map: room?.map || null,
       catalog,
     };
@@ -8689,7 +8698,7 @@ window.TowerOffline = { heroes, mapgen, engine };
     });
 
     if (u.pathname === '/api/quick' && method === 'POST') {
-      return ok(createQuick(body.name, body.aiLevel, body.mapSize, body.teamMode, body.maxPlayers));
+      return ok(createQuick(body.name, body.aiLevel, body.mapSize, body.teamMode, body.maxPlayers, body.manualAttack));
     }
     if (u.pathname === '/api/action' && method === 'POST') {
       return ok(handleAction(body));
@@ -8841,6 +8850,7 @@ const els = {
   phasePill: $('#phase-pill'),
   timerPill: $('#timer-pill'),
   attackModePill: $('#attack-mode-pill'),
+  mapInputHint: $('#map-input-hint'),
   roomPill: $('#room-pill'),
   connDot: $('#conn-dot'),
   connText: $('#conn-text'),
@@ -8963,6 +8973,7 @@ const els = {
   joinBtn: $('#join-btn'),
   startAiLevel: $('#start-ai-level'),
   startAttackMode: $('#start-attack-mode'),
+  attackModeNote: $('#attack-mode-note'),
   startMapSize: $('#start-map-size'),
   startTeamMode: $('#start-team-mode'),
   startPlayers: $('#start-players'),
@@ -9661,7 +9672,7 @@ async function startFreshGame() {
   els.spectate.classList.add('hidden');
   closeEliminatedModal();
   try {
-    const data = await api('/api/quick', { name });
+    const data = await api('/api/quick', { name, aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode, maxPlayers: app.maxPlayers, manualAttack: app.attackMode !== 'auto' });
     if (!data.ok) {
       showStart();
       showToast(data.error || '新局创建失败', 'error');
@@ -9984,6 +9995,11 @@ function updateModeButtons() {
   const maps = { standard: '标准图', large: '大地图', xlarge: '超大图' };
   const modes = { ffa: '自由混战', teams: teamModeLabel() };
   const attackName = app.attackMode === 'auto' ? '自动战斗' : '手速模式';
+  if (els.attackModeNote) {
+    els.attackModeNote.textContent = app.attackMode === 'auto'
+      ? '自动战斗：点击敌人只追击，不造成手动伤害'
+      : '手速模式：点击敌人立即追加手动伤害';
+  }
   const small = els.quickBtn?.querySelector('small');
   if (small) small.textContent = `你 + ${Math.max(1, app.maxPlayers - 1)} 名 AI · ${names[app.aiLevel] || '标准'} · ${maps[app.mapSize] || '标准图'} · ${modes[app.teamMode] || '自由混战'} · ${attackName}`;
 }
@@ -10020,7 +10036,7 @@ function readTeamModePreference() {
 function readPlayersPreference() {
   try {
     const v = Number(localStorage.getItem(playersKey));
-    if ([4, 6, 8].includes(v)) return v;
+    if ([2, 4, 6, 8].includes(v)) return v;
   } catch { /* noop */ }
   return 4;
 }
@@ -10330,7 +10346,9 @@ function applyPhaseUI(prevPhase) {
   if (app.mobile) {
     if (phase === 'battle' && prevPhase !== 'battle' && !app.replayMode) {
       app.mobilePanelOpen = false;
-      showToast('左侧摇杆移动 · 按住「攻」连续攻击 · 右上角 ▤ 打开面板', 'gold', 3600);
+      showToast(isManualAttackMode()
+        ? '左侧摇杆移动 · 按住「攻」连续攻击 · 右上角 ▤ 打开面板'
+        : '自动战斗 · 点击敌人只追击 · 右上角 ▤ 打开面板', 'gold', 3600);
     } else if (phase === 'lobby' || phase === 'draft' || phase === 'ended') {
       app.mobilePanelOpen = true;
     }
@@ -10364,7 +10382,9 @@ function applyPhaseUI(prevPhase) {
     els.toasts.innerHTML = '';
     app.toastCount = 0;
     if (phase === 'battle') {
-      showAnnounce('战斗开始 · 点击敌人立即攻击，收集金币建造更多魂塔', '');
+      showAnnounce(isManualAttackMode()
+        ? '战斗开始 · 点击敌人立即攻击，收集金币建造更多魂塔'
+        : '自动战斗 · 点击敌人只追击，伤害由自动攻击与技能结算', '');
     } else if (phase === 'draft') {
       hideAnnounce();
     } else if (phase === 'ended') {
@@ -10405,6 +10425,11 @@ function updateHeader() {
     els.attackModePill.title = manual
       ? '手速模式：点击敌人立即追加手动攻击'
       : '自动战斗：点击敌人只追击，伤害由自动攻击结算';
+  }
+  if (els.mapInputHint) {
+    els.mapInputHint.innerHTML = manual
+      ? '<kbd>WASD</kbd> / 左键 移动 · 右键拖动地图 · 滚轮缩放 · 点英雄选中 · 连点敌人立即攻击'
+      : '<kbd>WASD</kbd> / 左键 移动 · 右键拖动地图 · 滚轮缩放 · 点英雄选中 · 自动战斗：点击敌人只追击';
   }
   els.roomPill.querySelector('b').textContent = app.code || '----';
 }
@@ -13500,7 +13525,7 @@ async function loadReplayList() {
         (r) => `
         <button class="replay-list-item" data-replay-id="${esc(r.id)}">
           <span class="rl-main">
-            <b>${esc(r.winner ? `${r.winner} 获胜` : '平局')} · 房间 ${esc(r.code)}</b>
+            <b>${esc(r.winner ? `${r.winner} 获胜` : '平局')} · 房间 ${esc(r.code)} · ${r.manualAttack === false ? '自动战斗' : '手速模式'}</b>
             <small>${esc((r.players || []).join(' / '))}</small>
           </span>
           <span class="rl-meta">${fmtTime(r.duration || 0)}<br>${esc(fmtReplayDate(r.endedAt))}</span>

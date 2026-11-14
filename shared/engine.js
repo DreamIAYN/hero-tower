@@ -606,6 +606,7 @@ export function createBattle(room, map) {
     deathModeAt: 0,
     tutorial: !!room.tutorial,
     teamMode: room.teamMode === 'teams',
+    manualAttack: room.manualAttack !== false,
     matchLimit: map.size === 'xlarge' ? 24 * 60 : map.w > 50 ? 20 * 60 : MATCH_LIMIT_SECONDS,
     deathModeAt: map.size === 'xlarge' ? 22 * 60 : map.w > 50 ? 18 * 60 : DEATH_MODE_AT,
     aiLevel: AI_LEVELS[room.aiLevel] ? room.aiLevel : 'normal',
@@ -836,7 +837,7 @@ export function applyBattleAction(sim, playerId, action) {
       const clones = playerClones(sim, player);
       commandAttack(sim, hero, target);
       for (const clone of clones) commandAttack(sim, clone, target);
-      if (action.manual) {
+      if (action.manual && sim.manualAttack !== false) {
         manualAttackUnit(sim, player, hero, target);
         for (const clone of clones) manualAttackUnit(sim, player, clone, target);
       }
@@ -870,6 +871,7 @@ export function applyBattleAction(sim, playerId, action) {
 }
 
 function manualAttackUnit(sim, player, unit, target, damageMult = MANUAL_ATTACK_MULT) {
+  if (sim.manualAttack === false) return false;
   if (!unit || !unit.alive || !target || !target.alive) return false;
   if (distance(unit, target) > attackReach(unit, target)) return false;
   if (sim.time - (unit.lastManualAt || -99) < MANUAL_ATTACK_MIN_INTERVAL) return false;
@@ -1726,8 +1728,9 @@ export function tickBattle(sim, dt) {
   }
 
   // AI 等效点击：只模拟 AI 当前操作英雄的点击，按每个 AI 自己的 CPS 累积。
+  // 无手动攻击模式：AI 也不模拟点击，只保留自动攻击/技能。
   for (const p of sim.players) {
-    if (!p.isAI || p.eliminated) continue;
+    if (!p.isAI || p.eliminated || sim.manualAttack === false) continue;
     const aiClickCfg = sim.ai[p.id]?.cfg || AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
     const aiCps = Math.max(1, aiClickCfg.cps || 5);
     p.aiClickBudget = Math.min(1.2, (p.aiClickBudget || 0) + aiCps * dt);
@@ -2555,6 +2558,7 @@ export function serializeSim(sim, consumeEvents = true) {
     winner: sim.winner,
     endReason: sim.endReason,
     teamMode: !!sim.teamMode,
+    manualAttack: sim.manualAttack !== false,
     winnerTeam: sim.winnerTeam ?? null,
     deathMode: !!sim.deathMode,
     deathModeAt: sim.deathModeAt || 0,

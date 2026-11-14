@@ -192,6 +192,7 @@ function main() {
       createdAt,
       endedAt: Date.now(),
       aiLevel: 'nightmare',
+      manualAttack: true,
       duration: frames.length ? frames[frames.length - 1].t : 0,
       players: sim.players.map((p) => ({
         id: p.id,
@@ -217,6 +218,7 @@ function main() {
       endedAt: replay.endedAt,
       duration: replay.duration,
       aiLevel: replay.aiLevel,
+      manualAttack: replay.manualAttack !== false,
       winner: result.winnerName,
       reason: result.reason,
       players: replay.players.map((p) => p.name),

@@ -198,6 +198,7 @@ const els = {
   joinBtn: $('#join-btn'),
   startAiLevel: $('#start-ai-level'),
   startAttackMode: $('#start-attack-mode'),
+  attackModeNote: $('#attack-mode-note'),
   startMapSize: $('#start-map-size'),
   startTeamMode: $('#start-team-mode'),
   startPlayers: $('#start-players'),
@@ -896,7 +897,7 @@ async function startFreshGame() {
   els.spectate.classList.add('hidden');
   closeEliminatedModal();
   try {
-    const data = await api('/api/quick', { name });
+    const data = await api('/api/quick', { name, aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode, maxPlayers: app.maxPlayers, manualAttack: app.attackMode !== 'auto' });
     if (!data.ok) {
       showStart();
       showToast(data.error || '新局创建失败', 'error');
@@ -1219,6 +1220,11 @@ function updateModeButtons() {
   const maps = { standard: '标准图', large: '大地图', xlarge: '超大图' };
   const modes = { ffa: '自由混战', teams: teamModeLabel() };
   const attackName = app.attackMode === 'auto' ? '自动战斗' : '手速模式';
+  if (els.attackModeNote) {
+    els.attackModeNote.textContent = app.attackMode === 'auto'
+      ? '自动战斗：点击敌人只追击，不造成手动伤害'
+      : '手速模式：点击敌人立即追加手动伤害';
+  }
   const small = els.quickBtn?.querySelector('small');
   if (small) small.textContent = `你 + ${Math.max(1, app.maxPlayers - 1)} 名 AI · ${names[app.aiLevel] || '标准'} · ${maps[app.mapSize] || '标准图'} · ${modes[app.teamMode] || '自由混战'} · ${attackName}`;
 }
@@ -1255,7 +1261,7 @@ function readTeamModePreference() {
 function readPlayersPreference() {
   try {
     const v = Number(localStorage.getItem(playersKey));
-    if ([4, 6, 8].includes(v)) return v;
+    if ([2, 4, 6, 8].includes(v)) return v;
   } catch { /* noop */ }
   return 4;
 }
@@ -1565,7 +1571,9 @@ function applyPhaseUI(prevPhase) {
   if (app.mobile) {
     if (phase === 'battle' && prevPhase !== 'battle' && !app.replayMode) {
       app.mobilePanelOpen = false;
-      showToast('左侧摇杆移动 · 按住「攻」连续攻击 · 右上角 ▤ 打开面板', 'gold', 3600);
+      showToast(isManualAttackMode()
+        ? '左侧摇杆移动 · 按住「攻」连续攻击 · 右上角 ▤ 打开面板'
+        : '自动战斗 · 点击敌人只追击 · 右上角 ▤ 打开面板', 'gold', 3600);
     } else if (phase === 'lobby' || phase === 'draft' || phase === 'ended') {
       app.mobilePanelOpen = true;
     }
@@ -1599,7 +1607,9 @@ function applyPhaseUI(prevPhase) {
     els.toasts.innerHTML = '';
     app.toastCount = 0;
     if (phase === 'battle') {
-      showAnnounce('战斗开始 · 点击敌人立即攻击，收集金币建造更多魂塔', '');
+      showAnnounce(isManualAttackMode()
+        ? '战斗开始 · 点击敌人立即攻击，收集金币建造更多魂塔'
+        : '自动战斗 · 点击敌人只追击，伤害由自动攻击与技能结算', '');
     } else if (phase === 'draft') {
       hideAnnounce();
     } else if (phase === 'ended') {

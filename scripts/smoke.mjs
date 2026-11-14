@@ -137,6 +137,34 @@ for (const seed of seeds) {
   assert.equal(afterDeath.players[1].respawnIn, 5, 'level-1 respawn cooldown is 5s');
 }
 
+// 自动战斗模式：手动点击不结算伤害，追击指令仍然生效
+{
+  const map = generateMap(7742);
+  const room = {
+    manualAttack: false,
+    players: [
+      { id: 'a', name: 'A', slot: 0, isAI: false, connected: true, heroId: null, placement: chooseAIPlacement(map, 0) },
+      { id: 'b', name: 'B', slot: 1, isAI: false, connected: true, heroId: null, placement: chooseAIPlacement(map, 1) },
+    ],
+  };
+  const sim = createBattle(room, map);
+  for (const p of sim.players) {
+    assert.ok(applyBattleAction(sim, p.id, { type: 'summon', heroId: 'falcon' }).ok);
+  }
+  const attacker = sim.players[0].hero;
+  const victim = sim.players[1].hero;
+  victim.x = attacker.x + 60;
+  victim.y = attacker.y;
+  sim.time += 1;
+  const before = victim.hp;
+  const res = applyBattleAction(sim, 'a', { type: 'attack', kind: 'hero', id: victim.id, manual: true });
+  assert.ok(res.ok);
+  assert.equal(victim.hp, before, 'auto mode must not apply manual damage');
+  assert.deepEqual(attacker.target, { kind: 'hero', id: victim.id }, 'auto mode still commands chase');
+  for (let i = 0; i < 80; i++) tickBattle(sim, 1 / 30);
+  assert.ok(victim.hp < before, 'auto attack should still deal damage');
+}
+
 // 新英雄：镜像数量限制 / 灵仆数量限制 / 到期回收
 {
   function makeDuel(heroId) {

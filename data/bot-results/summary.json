@@ -1,0 +1,402 @@
+{
+  "generatedAt": "2026-11-08",
+  "constraints": {
+    "engine": "shared/engine.js applyBattleAction",
+    "maxClicksPerSecond": 10,
+    "maxActionsPerSecond": 10,
+    "stateMutation": false,
+    "rejectedAcrossMainRuns": 0
+  },
+  "main": {
+    "ffa_vs_3_nightmare": {
+      "wins": 1792,
+      "matches": 2400,
+      "p": 0.7466666666666667,
+      "lo": 0.7288814769460806,
+      "hi": 0.7636634561310408
+    },
+    "duel_vs_nightmare": {
+      "wins": 546,
+      "matches": 600,
+      "p": 0.91,
+      "lo": 0.8844167068596317,
+      "hi": 0.9303665078112359
+    },
+    "mirror_4x_sniper_best": {
+      "wins": 300,
+      "matches": 1200,
+      "p": 0.25,
+      "lo": 0.2263238956696973,
+      "hi": 0.27527166308155365
+    }
+  },
+  "ffa_by_slot": [
+    {
+      "slot": 0,
+      "wins": 433,
+      "plays": 600
+    },
+    {
+      "slot": 1,
+      "wins": 455,
+      "plays": 600
+    },
+    {
+      "slot": 2,
+      "wins": 460,
+      "plays": 600
+    },
+    {
+      "slot": 3,
+      "wins": 444,
+      "plays": 600
+    }
+  ],
+  "duel_by_slot": [
+    {
+      "slot": 0,
+      "policy": "sniper_best",
+      "wins": 272,
+      "plays": 300,
+      "winRate": 0.9066666666666666,
+      "ci95": [
+        0.8684138011961098,
+        0.9346362090723985
+      ]
+    },
+    {
+      "slot": 1,
+      "policy": "sniper_best",
+      "wins": 274,
+      "plays": 300,
+      "winRate": 0.9133333333333333,
+      "ci95": [
+        0.8760432544899761,
+        0.940171510045229
+      ]
+    }
+  ],
+  "cps_ffa": {
+    "5": {
+      "policy": "sniper_best",
+      "wins": 53,
+      "plays": 200,
+      "winRate": 0.265,
+      "ci95": [
+        0.20868060011609973,
+        0.33017702266551113
+      ]
+    },
+    "7": {
+      "policy": "sniper_best",
+      "wins": 87,
+      "plays": 200,
+      "winRate": 0.435,
+      "ci95": [
+        0.368156071588974,
+        0.5042939091804078
+      ]
+    },
+    "10": {
+      "policy": "sniper_best",
+      "wins": 143,
+      "plays": 200,
+      "winRate": 0.715,
+      "ci95": [
+        0.648845269187895,
+        0.773050948267227
+      ]
+    }
+  },
+  "cps_duel": {
+    "5": {
+      "policy": "sniper_best",
+      "wins": 137,
+      "plays": 200,
+      "winRate": 0.685,
+      "ci95": [
+        0.617649158589664,
+        0.7453778192205573
+      ]
+    },
+    "7": {
+      "policy": "sniper_best",
+      "wins": 149,
+      "plays": 200,
+      "winRate": 0.745,
+      "ci95": [
+        0.6803694869280502,
+        0.8003959701719726
+      ]
+    },
+    "10": {
+      "policy": "sniper_best",
+      "wins": 182,
+      "plays": 200,
+      "winRate": 0.91,
+      "ci95": [
+        0.8622332538615105,
+        0.9423130212854665
+      ]
+    }
+  },
+  "equal_cps_ffa": {
+    "5cps_vs_5cps_hard": {
+      "policy": "sniper_best",
+      "wins": 162,
+      "plays": 200,
+      "winRate": 0.81,
+      "ci95": [
+        0.7499864142552062,
+        0.8583290620754351
+      ]
+    },
+    "5cps_vs_3cps_normal": {
+      "policy": "sniper_best",
+      "wins": 200,
+      "plays": 200,
+      "winRate": 1,
+      "ci95": [
+        0.9811539940816791,
+        1
+      ]
+    }
+  },
+  "difficulty_ffa": {
+    "easy": {
+      "policy": "sniper_best",
+      "wins": 200,
+      "plays": 200,
+      "winRate": 1,
+      "ci95": [
+        0.9811539940816791,
+        1
+      ]
+    },
+    "normal": {
+      "policy": "sniper_best",
+      "wins": 200,
+      "plays": 200,
+      "winRate": 1,
+      "ci95": [
+        0.9811539940816791,
+        1
+      ]
+    },
+    "hard": {
+      "policy": "sniper_best",
+      "wins": 193,
+      "plays": 200,
+      "winRate": 0.965,
+      "ci95": [
+        0.9295285391333187,
+        0.9829446753626429
+      ]
+    },
+    "nightmare": {
+      "policy": "sniper_best",
+      "wins": 157,
+      "plays": 200,
+      "winRate": 0.785,
+      "ci95": [
+        0.7229757022632792,
+        0.836282074363278
+      ]
+    }
+  },
+  "policy_ladder_ffa": {
+    "sniper_best": {
+      "policy": "sniper_best",
+      "wins": 160,
+      "plays": 200,
+      "winRate": 0.8,
+      "ci95": [
+        0.7391436038882958,
+        0.8495487925607118
+      ]
+    },
+    "sniper_rush": {
+      "policy": "sniper_rush",
+      "wins": 156,
+      "plays": 200,
+      "winRate": 0.78,
+      "ci95": [
+        0.7176107720803744,
+        0.8318354646053661
+      ]
+    },
+    "sniper_multi": {
+      "policy": "sniper_multi",
+      "wins": 156,
+      "plays": 200,
+      "winRate": 0.78,
+      "ci95": [
+        0.7176107720803744,
+        0.8318354646053661
+      ]
+    },
+    "sniper_tank": {
+      "policy": "sniper_tank",
+      "wins": 138,
+      "plays": 200,
+      "winRate": 0.69,
+      "ci95": [
+        0.622826945087378,
+        0.75001157266366
+      ]
+    },
+    "adaptive": {
+      "policy": "adaptive",
+      "wins": 49,
+      "plays": 200,
+      "winRate": 0.245,
+      "ci95": [
+        0.19056777914685893,
+        0.3090436838714848
+      ]
+    },
+    "bruiser": {
+      "policy": "bruiser",
+      "wins": 22,
+      "plays": 200,
+      "winRate": 0.11,
+      "ci95": [
+        0.07377190160716048,
+        0.16092798300912986
+      ]
+    },
+    "summoner": {
+      "policy": "summoner",
+      "wins": 22,
+      "plays": 200,
+      "winRate": 0.11,
+      "ci95": [
+        0.07377190160716048,
+        0.16092798300912986
+      ]
+    },
+    "swarm2": {
+      "policy": "swarm2",
+      "wins": 1,
+      "plays": 200,
+      "winRate": 0.005,
+      "ci95": [
+        0.0008831459893662054,
+        0.02777439986977148
+      ]
+    },
+    "random": {
+      "policy": "random",
+      "wins": 0,
+      "plays": 200,
+      "winRate": 0,
+      "ci95": [
+        0,
+        0.018846005918320894
+      ]
+    }
+  },
+  "policy_ladder_duel": {
+    "sniper_best": {
+      "policy": "sniper_best",
+      "wins": 95,
+      "plays": 100,
+      "winRate": 0.95,
+      "ci95": [
+        0.8882480347279118,
+        0.9784566385436864
+      ]
+    },
+    "sniper_rush": {
+      "policy": "sniper_rush",
+      "wins": 97,
+      "plays": 100,
+      "winRate": 0.97,
+      "ci95": [
+        0.915479219195973,
+        0.9897456617765851
+      ]
+    },
+    "sniper_multi": {
+      "policy": "sniper_multi",
+      "wins": 90,
+      "plays": 100,
+      "winRate": 0.9,
+      "ci95": [
+        0.8256326956323347,
+        0.9447714583868639
+      ]
+    },
+    "sniper_tank": {
+      "policy": "sniper_tank",
+      "wins": 88,
+      "plays": 100,
+      "winRate": 0.88,
+      "ci95": [
+        0.8018773199709163,
+        0.9300066263473222
+      ]
+    },
+    "adaptive": {
+      "policy": "adaptive",
+      "wins": 58,
+      "plays": 100,
+      "winRate": 0.58,
+      "ci95": [
+        0.4820630799889527,
+        0.672017750814887
+      ]
+    },
+    "bruiser": {
+      "policy": "bruiser",
+      "wins": 47,
+      "plays": 100,
+      "winRate": 0.47,
+      "ci95": [
+        0.3751065198210374,
+        0.5671131686275227
+      ]
+    },
+    "summoner": {
+      "policy": "summoner",
+      "wins": 33,
+      "plays": 100,
+      "winRate": 0.33,
+      "ci95": [
+        0.24562983793895452,
+        0.4269483966028862
+      ]
+    },
+    "swarm2": {
+      "policy": "swarm2",
+      "wins": 1,
+      "plays": 100,
+      "winRate": 0.01,
+      "ci95": [
+        0.0017673865655472645,
+        0.0544875247609346
+      ]
+    },
+    "random": {
+      "policy": "random",
+      "wins": 0,
+      "plays": 100,
+      "winRate": 0,
+      "ci95": [
+        0,
+        0.03699480747600191
+      ]
+    }
+  },
+  "map_seed": {
+    "seeds": 300,
+    "wins_per_seed_counts": [
+      7,
+      23,
+      64,
+      77,
+      129
+    ],
+    "mean_pairwise_slot_correlation": 0.181
+  }
+}

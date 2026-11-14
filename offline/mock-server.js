@@ -96,7 +96,7 @@
 
   let roomMap = null;
 
-  function createQuick(name, aiLevel, mapSize, teamMode, maxPlayers = 4) {
+  function createQuick(name, aiLevel, mapSize, teamMode, maxPlayers = 4, manualAttack = true) {
     const size = mapSize === 'xlarge' ? 'xlarge' : mapSize === 'large' ? 'large' : 'standard';
     const mode = teamMode === 'teams' ? 'teams' : 'ffa';
     roomMap = generateMap(undefined, { size });
@@ -105,10 +105,11 @@
       code: newCode(),
       createdAt: Date.now(),
       hostId: 'offline-human',
-      maxPlayers: [4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4,
+      maxPlayers: [2, 4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4,
       aiLevel: level,
       mapSize: size,
       teamMode: mode,
+      manualAttack: manualAttack !== false,
       map: roomMap,
       phase: 'draft',
       paused: false,
@@ -118,7 +119,7 @@
       result: null,
       lastTick: Date.now(),
       lastBroadcast: 0,
-      players: makePlayers(name, mode, [4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4),
+      players: makePlayers(name, mode, [2, 4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4),
     };
     streams.clear();
     if (!timer) timer = setInterval(loop, 33);
@@ -163,6 +164,7 @@
         aiLevel: room.aiLevel,
         mapSize: room.mapSize,
         teamMode: room.teamMode,
+        manualAttack: room.manualAttack !== false,
         maxPlayers: room.maxPlayers,
         serverNow: Date.now(),
         players: room.players.map(draftPlayer),
@@ -190,6 +192,7 @@
       aiLevel: room.aiLevel,
       mapSize: room.mapSize,
       teamMode: room.teamMode,
+      manualAttack: room.manualAttack !== false,
       maxPlayers: room.maxPlayers,
       serverNow: Date.now(),
       players: battle ? battle.players : [],
@@ -209,6 +212,7 @@
       playerId: 'offline-human',
       isHost: true,
       spectator: false,
+      manualAttack: room?.manualAttack !== false,
       map: room?.map || null,
       catalog,
     };
@@ -424,7 +428,7 @@
     });
 
     if (u.pathname === '/api/quick' && method === 'POST') {
-      return ok(createQuick(body.name, body.aiLevel, body.mapSize, body.teamMode, body.maxPlayers));
+      return ok(createQuick(body.name, body.aiLevel, body.mapSize, body.teamMode, body.maxPlayers, body.manualAttack));
     }
     if (u.pathname === '/api/action' && method === 'POST') {
       return ok(handleAction(body));
