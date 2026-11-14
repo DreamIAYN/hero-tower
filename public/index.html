@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#071019" />
     <title>塔魂：四境争锋</title>
-    <link rel="stylesheet" href="/styles.css?v=2.12.0" />
+    <link rel="stylesheet" href="/styles.css?v=2.13.1" />
   </head>
   <body>
     <div class="app" id="app">
@@ -53,6 +53,12 @@
         <section class="stage" id="stage">
           <canvas id="game"></canvas>
           <div class="stage-glow"></div>
+          <div class="map-controls" id="map-controls">
+            <button class="map-ctl" id="map-zoom-out" title="缩小地图">−</button>
+            <button class="map-ctl" id="map-zoom-in" title="放大地图">＋</button>
+            <button class="map-ctl map-hand" id="map-hand" title="拖动地图模式：开启后左键拖动地图">手</button>
+            <button class="map-ctl map-center" id="map-center" title="回到我的英雄">中</button>
+          </div>
           <div class="replay-bar hidden" id="replay-bar">
             <button class="mini-btn replay-play" id="replay-play">Ⅱ</button>
             <input class="replay-seek" id="replay-seek" type="range" min="0" max="100" step="0.1" value="0" aria-label="回放进度" />
@@ -115,8 +121,8 @@
           </div>
 
           <div class="stage-bottom-hint">
-            <span><kbd>WASD</kbd> / 左键 移动 · 点英雄选中 · 连点敌人立即攻击</span>
-            <span><kbd>Q</kbd> 技能 · <kbd>F</kbd> 集火 · <kbd>K</kbd> 保持距离 · <kbd>P</kbd> 暂停 · 触屏直接点按</span>
+            <span><kbd>WASD</kbd> / 左键 移动 · 右键拖动地图 · 滚轮缩放 · 点英雄选中 · 连点敌人立即攻击</span>
+            <span><kbd>Q</kbd> 技能 · <kbd>F</kbd> 集火 · <kbd>T</kbd> 自动选人 · <kbd>K</kbd> 保持距离 · <kbd>P</kbd> 暂停 · 触屏直接点按</span>
             <span class="you-legend"><b>你</b> 白色标记 = 你的英雄</span>
             <span class="resource-legend"><i></i> 走过资源点拾取金币</span>
           </div>
@@ -226,6 +232,12 @@
               <em id="skill-cost">35</em>
             </button>
 
+            <button class="auto-select-button" id="auto-select-button">
+              <span class="auto-mark">自</span>
+              <span class="auto-text"><b>自动选人</b><small>未手动选人时，攻击自动选最近英雄</small></span>
+              <kbd>T</kbd>
+            </button>
+
             <button class="kite-button" id="kite-button">
               <span class="kite-mark">↔</span>
               <span class="kite-text"><b>保持距离</b><small>攻击时后撤到射程边缘</small></span>
@@ -268,7 +280,7 @@
             <p id="lobby-side-text">邀请好友加入，或者直接让 AI 补位。</p>
             <div class="lobby-side-stats">
               <div><span>席位</span><b id="lobby-side-slots">1 / 4</b></div>
-              <div><span>模式</span><b>自由混战</b></div>
+              <div><span>模式</span><b id="lobby-side-mode">自由混战</b></div>
             </div>
             <p class="command-hint">房主开始后，所有玩家进入魂塔部署阶段。</p>
           </div>
@@ -298,6 +310,20 @@
                 <button type="button" data-ai-level="normal" class="active" title="等效点击 CPS 3">标准</button>
                 <button type="button" data-ai-level="hard" title="等效点击 CPS 5">困难</button>
                 <button type="button" data-ai-level="nightmare" title="等效点击 CPS 7">噩梦</button>
+              </div>
+            </div>
+            <div class="ai-level-picker">
+              <span>地图</span>
+              <div class="ai-level-options" id="start-map-size">
+                <button type="button" data-map-size="standard" class="active">标准</button>
+                <button type="button" data-map-size="large">大地图</button>
+              </div>
+            </div>
+            <div class="ai-level-picker">
+              <span>模式</span>
+              <div class="ai-level-options" id="start-team-mode">
+                <button type="button" data-team-mode="ffa" class="active">自由混战</button>
+                <button type="button" data-team-mode="teams">团队 2v2</button>
               </div>
             </div>
             <div class="start-buttons">
@@ -364,6 +390,20 @@
               <button data-ai-level="normal" title="等效点击 CPS 3">标准</button>
               <button data-ai-level="hard" title="等效点击 CPS 5">困难</button>
               <button data-ai-level="nightmare" title="等效点击 CPS 7">噩梦</button>
+            </div>
+          </div>
+          <div class="lobby-setting">
+            <span>地图</span>
+            <div class="slot-choice" id="lobby-map-size">
+              <button data-map-size="standard">标准</button>
+              <button data-map-size="large">大地图</button>
+            </div>
+          </div>
+          <div class="lobby-setting">
+            <span>模式</span>
+            <div class="slot-choice" id="lobby-team-mode">
+              <button data-team-mode="ffa">自由混战</button>
+              <button data-team-mode="teams">团队 2v2</button>
             </div>
           </div>
           <div class="lobby-actions">
@@ -467,7 +507,7 @@
             </section>
             <section>
               <h4>04 · 点击即攻击与集火</h4>
-              <p>点击/轻触敌人会立即尝试一次手动攻击，同时保留自动攻击。按 <b>F</b> 或点「集火」按钮进入集火模式，再点敌人，让所有存活英雄一起追击该目标。触屏施放需要落点的技能时，先点技能按钮，再点地图。远程英雄可开启「保持距离」，攻击时会自动后撤到射程边缘。</p>
+              <p>点击/轻触敌人会立即尝试一次手动攻击，同时保留自动攻击。按 <b>T</b> 可开启/关闭「自动选人」：未手动指定英雄时，点击敌人会自动派出离目标最近的存活英雄；手动点己方英雄会锁定该英雄。按 <b>F</b> 或点「集火」按钮进入集火模式，再点敌人，让所有存活英雄一起追击该目标。按住右键/中键拖动地图（或点「手」后左键拖动），滚轮或右侧 ＋/− 缩放，点「中」回到自己的英雄。新召唤英雄默认开启「保持距离」。</p>
             </section>
             <section>
               <h4>05 · 魂塔与装备</h4>
@@ -483,6 +523,6 @@
       </div>
     </div>
 
-    <script type="module" src="/client.js?v=2.12.0"></script>
+    <script type="module" src="/client.js?v=2.13.1"></script>
   </body>
 </html>

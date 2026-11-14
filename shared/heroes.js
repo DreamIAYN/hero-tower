@@ -58,23 +58,23 @@ export const AI_LEVELS = {
   hard: {
     id: 'hard',
     name: '困难',
-    desc: 'AI 反应更快，优先集火残血，频繁扩建与升级。',
-    think: [0.18, 0.32],
-    spend: [0.9, 1.6],
-    engage: 640,
-    earlyEngage: 350,
+    desc: '反应接近人类高手：4 CPS、会集火/回防、只放当前英雄技能。',
+    think: [0.28, 0.48],
+    spend: [1.2, 2.0],
+    engage: 620,
+    earlyEngage: 340,
     retreat: 0.2,
-    cps: 5,
-    clickDamage: 0.5,
-    startGoldBonus: 100,
+    cps: 4,
+    clickDamage: 0.45,
+    startGoldBonus: 70,
     defend: true,
     focus: true,
     smart: true,
-    buildGold: 360,
-    buildReserve: 70,
-    resourceGold: 1500,
-    repairAt: 0.7,
-    allSkills: true,
+    buildGold: 390,
+    buildReserve: 80,
+    resourceGold: 1900,
+    repairAt: 0.74,
+    allSkills: false,
   },
   nightmare: {
     id: 'nightmare',
@@ -85,7 +85,7 @@ export const AI_LEVELS = {
     engage: 700,
     earlyEngage: 390,
     retreat: 0.18,
-    cps: 7,
+    cps: 6,
     clickDamage: 0.55,
     startGoldBonus: 250,
     defend: true,
@@ -99,6 +99,67 @@ export const AI_LEVELS = {
   },
 };
 export const AI_LEVEL_LIST = Object.values(AI_LEVELS);
+
+/**
+ * AI 专属英雄平衡表。
+ * 只影响 AI 控制的英雄，不影响玩家使用同一英雄时的数值。
+ * 目标：4 AI 混战、统一 6 CPS 标准下，每个 AI 的胜率尽量接近 25%。
+ *
+ * 字段：
+ *   cps           覆盖 AI 点击 CPS（默认沿用 AI_LEVELS）
+ *   clickDamage   覆盖 AI 手动点击伤害倍率（默认 0.55）
+ *   startGold     额外开局金币（可为负数；叠加在 AI 难度加成上）
+ *   thinkScale    决策间隔倍率（>1 更慢，<1 更快）
+ *   spendScale    花钱间隔倍率（>1 更慢，<1 更快）
+ *   engage / earlyEngage / retreat / buildGold / buildReserve / resourceGold
+ *                 可选覆盖，用于进一步微调
+ */
+export const AI_HERO_TUNING = {
+  falcon: {
+    clickDamage: 0.39,
+    startGold: -30,
+    thinkScale: 1.15,
+    spendScale: 1.15,
+  },
+  frost: {
+    clickDamage: 0.6,
+    startGold: 35,
+  },
+  spirit: {
+    clickDamage: 0.59,
+    startGold: 20,
+  },
+  lunar: {
+    clickDamage: 0.61,
+    startGold: 35,
+  },
+  shade: {
+    clickDamage: 0.73,
+    startGold: 85,
+    thinkScale: 0.9,
+    spendScale: 0.9,
+  },
+  ember: {
+    clickDamage: 0.79,
+    startGold: 95,
+  },
+  volt: {
+    clickDamage: 0.78,
+    startGold: 125,
+  },
+  thorn: {
+    clickDamage: 0.71,
+    startGold: 85,
+  },
+  bulwark: {
+    clickDamage: 0.7,
+    startGold: 30,
+  },
+  mirage: {
+    clickDamage: 0.78,
+    startGold: 115,
+  },
+};
 
 export const PLAYER_COLORS = ['#5bd7ff', '#ff6b61', '#7ee787', '#c792ea'];
 export const PLAYER_COLOR_NAMES = ['苍蓝', '赤焰', '青翠', '紫电'];

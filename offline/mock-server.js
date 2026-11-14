@@ -63,13 +63,14 @@
     return s;
   }
 
-  function makePlayers(name) {
+  function makePlayers(name, teamMode) {
     const heroes = [...AI_NAMES].sort(() => Math.random() - 0.5);
     const human = {
       id: 'offline-human',
       name: String(name || '旅者').slice(0, 12) || '旅者',
       slot: 0,
       isAI: false,
+      team: teamMode === 'teams' ? 0 : null,
       connected: true,
       heroId: null,
       placement: null,
@@ -83,6 +84,7 @@
         name: `AI · ${heroes[i % heroes.length] || '青蛇'}`,
         slot: i,
         isAI: true,
+        team: teamMode === 'teams' ? i % 2 : null,
         connected: true,
         heroId: chooseAIHero(),
         placement: place || null,
@@ -94,8 +96,10 @@
 
   let roomMap = null;
 
-  function createQuick(name, aiLevel) {
-    roomMap = generateMap();
+  function createQuick(name, aiLevel, mapSize, teamMode) {
+    const size = mapSize === 'large' ? 'large' : 'standard';
+    const mode = teamMode === 'teams' ? 'teams' : 'ffa';
+    roomMap = generateMap(undefined, { size });
     const level = AI_LEVELS[aiLevel] ? aiLevel : 'normal';
     room = {
       code: newCode(),
@@ -103,6 +107,8 @@
       hostId: 'offline-human',
       maxPlayers: 4,
       aiLevel: level,
+      mapSize: size,
+      teamMode: mode,
       map: roomMap,
       phase: 'draft',
       paused: false,
@@ -112,7 +118,7 @@
       result: null,
       lastTick: Date.now(),
       lastBroadcast: 0,
-      players: makePlayers(name),
+      players: makePlayers(name, mode),
     };
     streams.clear();
     if (!timer) timer = setInterval(loop, 33);
@@ -130,6 +136,7 @@
       slot: p.slot,
       color: playerColor(p.slot),
       isAI: p.isAI,
+      team: p.team ?? null,
       connected: true,
       aiControlled: p.isAI,
       heroId: p.heroId,
@@ -154,6 +161,8 @@
         code: room.code,
         hostId: room.hostId,
         aiLevel: room.aiLevel,
+        mapSize: room.mapSize,
+        teamMode: room.teamMode,
         maxPlayers: room.maxPlayers,
         serverNow: Date.now(),
         players: room.players.map(draftPlayer),
@@ -179,6 +188,8 @@
       code: room.code,
       hostId: room.hostId,
       aiLevel: room.aiLevel,
+      mapSize: room.mapSize,
+      teamMode: room.teamMode,
       maxPlayers: room.maxPlayers,
       serverNow: Date.now(),
       players: battle ? battle.players : [],
@@ -246,17 +257,36 @@
       if (a.eliminated !== b.eliminated) return a.eliminated ? 1 : -1;
       return b.kills * 160 + b.damageDealt * 0.35 - (a.kills * 160 + a.damageDealt * 0.35);
     });
+    const teamMode = !!sim.teamMode;
+    const teamNames = ['队伍 1', '队伍 2'];
+    const teamColors = ['#5bd7ff', '#ff6b61'];
+    const winningTeam = teamMode ? sim.winnerTeam : null;
     room.result = {
-      winnerId: sim.winner,
-      winnerName: winner ? winner.name : null,
-      winnerColor: winner ? winner.color : null,
+      winnerId: teamMode
+        ? (winningTeam == null ? null : `team-${winningTeam}`)
+        : sim.winner,
+      winnerName: teamMode
+        ? (winningTeam == null ? null : teamNames[winningTeam] || `队伍 ${winningTeam + 1}`)
+        : winner
+          ? winner.name
+          : null,
+      winnerColor: teamMode
+        ? (winningTeam == null ? null : teamColors[winningTeam] || null)
+        : winner
+          ? winner.color
+          : null,
+      teamMode,
+      winnerTeam: winningTeam,
+      winnerPlayerId: sim.winner,
       reason: sim.endReason,
       time: Math.floor(sim.time),
+      timeLimit: sim.matchLimit || 720,
       ranking: ranking.map((p, i) => ({
         rank: i + 1,
         id: p.id,
         name: p.name,
         color: p.color,
+        team: p.team ?? null,
         heroId: p.heroId,
         kills: p.kills,
         deaths: p.deaths,
@@ -287,7 +317,7 @@
   }
 
   function resetToDraft() {
-    roomMap = generateMap();
+    roomMap = generateMap(undefined, { size: room.mapSize });
     room.map = roomMap;
     room.phase = 'draft';
     room.paused = false;
@@ -298,9 +328,11 @@
     const human = room.players[0];
     human.placement = null;
     human.ready = false;
+    human.team = room.teamMode === 'teams' ? 0 : null;
     for (const p of room.players) {
       if (!p.isAI) continue;
       p.heroId = chooseAIHero();
+      p.team = room.teamMode === 'teams' ? p.slot % 2 : null;
       p.placement = chooseAIPlacement(room.map, p.slot);
       p.ready = true;
     }
@@ -392,7 +424,7 @@
     });
 
     if (u.pathname === '/api/quick' && method === 'POST') {
-      return ok(createQuick(body.name, body.aiLevel));
+      return ok(createQuick(body.name, body.aiLevel, body.mapSize, body.teamMode));
     }
     if (u.pathname === '/api/action' && method === 'POST') {
       return ok(handleAction(body));

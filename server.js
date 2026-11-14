@@ -175,6 +175,15 @@ function promoteHost(room) {
 /* ------------------------------------------------------------------ */
 
 let savingRooms = false;
+let saveSoonTimer = null;
+
+function saveSoon() {
+  if (saveSoonTimer) return;
+  saveSoonTimer = setTimeout(() => {
+    saveSoonTimer = null;
+    void saveRooms();
+  }, 180);
+}
 
 function snapshotRoom(room) {
   const snap = {
@@ -185,6 +194,8 @@ function snapshotRoom(room) {
     hostId: room.hostId,
     maxPlayers: room.maxPlayers,
     aiLevel: room.aiLevel || 'normal',
+    mapSize: room.mapSize || 'standard',
+    teamMode: room.teamMode || 'ffa',
     players: room.players.map((p) => ({ ...p })),
     spectators: [...(room.spectators || new Map()).values()].map((p) => ({ ...p })),
     map: room.map,
@@ -249,7 +260,10 @@ function hydrateRoom(saved) {
     ])
   );
   if (!AI_LEVELS[room.aiLevel]) room.aiLevel = 'normal';
+  if (room.mapSize !== 'large') room.mapSize = 'standard';
+  if (room.teamMode !== 'teams') room.teamMode = 'ffa';
   room.players.forEach((p) => {
+    p.team = room.teamMode === 'teams' ? p.slot % 2 : null;
     p.connected = !!p.isAI;
   });
   if (room.phase === 'battle' || room.phase === 'ended') {
@@ -330,8 +344,10 @@ async function loadRooms() {
 /* 房间                                                                */
 /* ------------------------------------------------------------------ */
 
-function createRoom(maxPlayers = 4, aiLevel = 'normal') {
+function createRoom(maxPlayers = 4, aiLevel = 'normal', options = {}) {
   const code = newRoomCode();
+  const mapSize = options.mapSize === 'large' ? 'large' : 'standard';
+  const teamMode = options.teamMode === 'teams' ? 'teams' : 'ffa';
   const room = {
     code,
     createdAt: Date.now(),
@@ -339,10 +355,12 @@ function createRoom(maxPlayers = 4, aiLevel = 'normal') {
     phase: 'lobby',
     hostId: null,
     aiLevel: AI_LEVELS[aiLevel] ? aiLevel : 'normal',
+    mapSize,
+    teamMode,
     maxPlayers: Math.max(2, Math.min(4, Number(maxPlayers) || 4)),
     players: [],
     spectators: new Map(),
-    map: generateMap(),
+    map: generateMap(undefined, { size: mapSize }),
     draftEndsAt: 0,
     startAt: 0,
     battleStartedAt: 0,
@@ -359,6 +377,10 @@ function createRoom(maxPlayers = 4, aiLevel = 'normal') {
   return room;
 }
 
+function teamForSlot(room, slot) {
+  return room.teamMode === 'teams' ? slot % 2 : null;
+}
+
 function addHuman(room, name) {
   if (room.phase !== 'lobby') return { error: '房间已经开局' };
   if (humanCount(room) >= room.maxPlayers || room.players.length >= room.maxPlayers) {
@@ -372,6 +394,7 @@ function addHuman(room, name) {
     slot,
     color: PLAYER_COLORS[slot % PLAYER_COLORS.length],
     isAI: false,
+    team: teamForSlot(room, slot),
     connected: true,
     heroId: null,
     ready: false,
@@ -415,6 +438,7 @@ function addAIPlayers(room, count) {
       slot,
       color: PLAYER_COLORS[slot % PLAYER_COLORS.length],
       isAI: true,
+      team: teamForSlot(room, slot),
       connected: true,
       heroId,
       ready: true,
@@ -444,10 +468,11 @@ function resetForLobby(room) {
   room.endedAt = null;
   room.draftEndsAt = 0;
   room.startAt = 0;
-  room.map = generateMap();
+  room.map = generateMap(undefined, { size: room.mapSize || 'standard' });
   room.players = room.players.filter((p) => !p.isAI);
   for (const p of room.players) {
     p.heroId = null;
+    p.team = teamForSlot(room, p.slot);
     p.ready = false;
     p.placement = null;
     p.connected = room.streams.has(p.id);
@@ -464,6 +489,7 @@ function addTutorialDummy(room) {
     slot: 1,
     color: PLAYER_COLORS[1],
     isAI: true,
+    team: null,
     connected: true,
     heroId: 'bulwark',
     ready: true,
@@ -543,6 +569,7 @@ function beginBattle(room) {
   room.sim = createBattle(room, room.map);
   startReplay(room);
   room.lastActivity = Date.now();
+  saveSoon();
   broadcast(room, true);
 }
 
@@ -556,17 +583,36 @@ function endBattleRoom(room) {
     if (a.eliminated !== b.eliminated) return a.eliminated ? 1 : -1;
     return b.kills * 160 + b.damageDealt * 0.35 - (a.kills * 160 + a.damageDealt * 0.35);
   });
+  const teamMode = !!sim.teamMode;
+  const teamNames = ['队伍 1', '队伍 2'];
+  const teamColors = ['#5bd7ff', '#ff6b61'];
+  const winningTeam = teamMode ? sim.winnerTeam : null;
   room.result = {
-    winnerId: sim.winner,
-    winnerName: winner ? winner.name : null,
-    winnerColor: winner ? winner.color : null,
+    winnerId: teamMode
+      ? (winningTeam == null ? null : `team-${winningTeam}`)
+      : sim.winner,
+    winnerName: teamMode
+      ? (winningTeam == null ? null : teamNames[winningTeam] || `队伍 ${winningTeam + 1}`)
+      : winner
+        ? winner.name
+        : null,
+    winnerColor: teamMode
+      ? (winningTeam == null ? null : teamColors[winningTeam] || null)
+      : winner
+        ? winner.color
+        : null,
+    teamMode,
+    winnerTeam: winningTeam,
+    winnerPlayerId: sim.winner,
     reason: sim.endReason,
     time: Math.floor(sim.time),
+    timeLimit: sim.matchLimit || MATCH_LIMIT_SECONDS,
     ranking: ranking.map((p, i) => ({
       rank: i + 1,
       id: p.id,
       name: p.name,
       color: p.color,
+      team: p.team ?? null,
       heroId: p.heroId,
       kills: p.kills,
       deaths: p.deaths,
@@ -579,6 +625,7 @@ function endBattleRoom(room) {
     room.result.replayId = room.replay.id;
     void finalizeReplay(room);
   }
+  saveSoon();
   broadcast(room, true);
 }
 
@@ -594,6 +641,7 @@ function roomPlayersPublic(room, battle = null) {
     slot: p.slot,
     color: p.color,
     isAI: p.isAI,
+    team: p.team ?? null,
     connected: p.connected,
     aiControlled: p.isAI || !p.connected,
     heroId: p.heroId,
@@ -619,6 +667,8 @@ function roomState(room, consumeEvents = true) {
     code: room.code,
     hostId: room.hostId,
     aiLevel: room.aiLevel || 'normal',
+    mapSize: room.mapSize || 'standard',
+    teamMode: room.teamMode || 'ffa',
     maxPlayers: room.maxPlayers,
     serverNow: now,
     players: roomPlayersPublic(room, battle),
@@ -735,6 +785,7 @@ function replayPlayerSummary(p) {
     slot: p.slot,
     color: p.color,
     isAI: p.isAI,
+    team: p.team ?? null,
     heroId: p.heroId,
     selectedHeroId: p.selectedHeroId,
     gold: p.gold,
@@ -795,13 +846,15 @@ function recordReplayTick(room, forceFrame = false) {
   }
   const t = Math.round(sim.time * 100) / 100;
   if (!forceFrame && t - replay.lastFrameAt < 1 / REPLAY_FPS) return;
-  if (replay.frames.length >= REPLAY_FPS * MATCH_LIMIT_SECONDS + 10) return;
+  if (replay.frames.length >= REPLAY_FPS * 20 * 60 + 10) return;
   const snap = serializeSim(sim, false);
   replay.frames.push({
     t,
     over: snap.over,
     winner: snap.winner,
     endReason: snap.endReason,
+    teamMode: !!snap.teamMode,
+    winnerTeam: snap.winnerTeam ?? null,
     deathMode: !!snap.deathMode,
     deathModeAt: snap.deathModeAt || 0,
     players: snap.players.map(replayPlayerSummary),
@@ -966,6 +1019,28 @@ function handleAction(room, player, action) {
       broadcast(room, true);
       return { ok: true };
     }
+    case 'setMapSize': {
+      if (room.phase !== 'lobby') return { ok: false, error: '开局后不能修改地图' };
+      if (room.hostId !== player.id) return { ok: false, error: '只有房主可以修改地图' };
+      const size = action.value === 'large' ? 'large' : 'standard';
+      room.mapSize = size;
+      room.map = generateMap(undefined, { size });
+      for (const p of room.players) {
+        p.placement = null;
+        p.ready = false;
+      }
+      broadcastMap(room);
+      broadcast(room, true);
+      return { ok: true };
+    }
+    case 'setTeamMode': {
+      if (room.phase !== 'lobby') return { ok: false, error: '开局后不能修改队伍模式' };
+      if (room.hostId !== player.id) return { ok: false, error: '只有房主可以修改队伍模式' };
+      room.teamMode = action.value === 'teams' ? 'teams' : 'ffa';
+      for (const p of room.players) p.team = teamForSlot(room, p.slot);
+      broadcast(room, true);
+      return { ok: true };
+    }
     case 'place': {
       if (room.phase !== 'draft') return { ok: false, error: '不在建塔阶段' };
       if (player.ready) return { ok: false, error: '已锁定，不能移动魂塔' };
@@ -1040,6 +1115,7 @@ function handleAction(room, player, action) {
     case 'buildTower':
     case 'focusFire':
     case 'toggleKite':
+    case 'toggleAutoSelect':
     case 'upgradeHero':
     case 'upgradeTower':
     case 'buyItem':
@@ -1164,7 +1240,7 @@ async function handleApi(req, res, pathname, query) {
   }
 
   if (pathname === '/api/create') {
-    const room = createRoom(4, body.aiLevel);
+    const room = createRoom(4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
     const added = addHuman(room, body.name);
     if (added.error) {
       json(res, 400, { error: added.error });
@@ -1175,7 +1251,7 @@ async function handleApi(req, res, pathname, query) {
   }
 
   if (pathname === '/api/quick') {
-    const room = createRoom(4, body.aiLevel);
+    const room = createRoom(4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
     const added = addHuman(room, body.name);
     if (added.error) {
       json(res, 400, { error: added.error });
@@ -1201,7 +1277,7 @@ async function handleApi(req, res, pathname, query) {
   }
 
   if (pathname === '/api/spectate') {
-    const room = createRoom(4, body.aiLevel);
+    const room = createRoom(4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
     fillAI(room);
     const spectator = addSpectator(room, body.name);
     startDraft(room);
@@ -1244,6 +1320,7 @@ async function handleApi(req, res, pathname, query) {
       return;
     }
     const result = handleAction(room, player, body.action || {});
+    if (result.ok) saveSoon();
     json(res, 200, result);
     return;
   }

@@ -61,6 +61,24 @@ function playerOf(sim, ownerId) {
   return sim.players.find((p) => p.id === ownerId) || null;
 }
 
+function teamOfPlayer(sim, ownerId) {
+  if (!sim.teamMode) return null;
+  const p = playerOf(sim, ownerId);
+  return p && p.team != null ? p.team : null;
+}
+
+function sameTeam(sim, a, b) {
+  if (a === b) return true;
+  if (!sim.teamMode) return false;
+  const ta = teamOfPlayer(sim, a);
+  const tb = teamOfPlayer(sim, b);
+  return ta != null && ta === tb;
+}
+
+function isEnemy(sim, a, b) {
+  return a !== b && !sameTeam(sim, a, b);
+}
+
 function entityById(sim, kind, id) {
   if (kind === 'hero') return sim.heroes.find((h) => h.id === id) || null;
   if (kind === 'tower') return sim.towers.find((t) => t.id === id) || null;
@@ -77,17 +95,17 @@ function enemiesOf(sim, ownerId, kind = null) {
   const out = [];
   if (!kind || kind === 'hero') {
     for (const h of sim.heroes) {
-      if (h.alive && h.owner !== ownerId) out.push(h);
+      if (h.alive && isEnemy(sim, ownerId, h.owner)) out.push(h);
     }
   }
   if (!kind || kind === 'tower') {
     for (const t of sim.towers) {
-      if (t.alive && t.owner !== ownerId) out.push(t);
+      if (t.alive && isEnemy(sim, ownerId, t.owner)) out.push(t);
     }
   }
   if (!kind || kind === 'summon') {
     for (const s of sim.summons) {
-      if (s.alive && s.owner !== ownerId) out.push(s);
+      if (s.alive && isEnemy(sim, ownerId, s.owner)) out.push(s);
     }
   }
   return out;
@@ -95,9 +113,9 @@ function enemiesOf(sim, ownerId, kind = null) {
 
 function alliesOf(sim, ownerId) {
   const out = [];
-  for (const h of sim.heroes) if (h.alive && h.owner === ownerId) out.push(h);
-  for (const t of sim.towers) if (t.alive && t.owner === ownerId) out.push(t);
-  for (const s of sim.summons) if (s.alive && s.owner === ownerId) out.push(s);
+  for (const h of sim.heroes) if (h.alive && sameTeam(sim, ownerId, h.owner)) out.push(h);
+  for (const t of sim.towers) if (t.alive && sameTeam(sim, ownerId, t.owner)) out.push(t);
+  for (const s of sim.summons) if (s.alive && sameTeam(sim, ownerId, s.owner)) out.push(s);
   return out;
 }
 
@@ -317,7 +335,7 @@ function createHeroEntity(sim, player, tower, heroId) {
     path: [],
     repathAt: 0,
     lastManualAt: -99,
-    kite: false,
+    kite: !player.isAI,
     inputDir: null,
     earned: 0,
     kills: 0,
@@ -455,7 +473,10 @@ function syncSelected(player) {
 function ensureAliveSelection(player) {
   if (!player.hero || !player.hero.alive) {
     const next = player.heroes.find((h) => h.alive);
-    if (next) player.selectedHeroId = next.id;
+    if (next) {
+      player.selectedHeroId = next.id;
+      player.manualHeroSelect = false;
+    }
   }
   syncSelected(player);
 }
@@ -476,6 +497,7 @@ function createHeroForTower(sim, player, tower, heroId) {
   player.heroes.push(hero);
   sim.heroes.push(hero);
   player.selectedHeroId = hero.id;
+  player.manualHeroSelect = false;
   syncSelected(player);
   return hero;
 }
@@ -577,11 +599,15 @@ export function createBattle(room, map) {
     eid: 1,
     over: false,
     winner: null,
+    winnerTeam: null,
     endReason: null,
     deathMode: false,
     deathWarned: false,
     deathModeAt: 0,
     tutorial: !!room.tutorial,
+    teamMode: room.teamMode === 'teams',
+    matchLimit: map.w > 50 ? 20 * 60 : MATCH_LIMIT_SECONDS,
+    deathModeAt: map.w > 50 ? 18 * 60 : DEATH_MODE_AT,
     aiLevel: AI_LEVELS[room.aiLevel] ? room.aiLevel : 'normal',
     ai: {},
   };
@@ -595,7 +621,22 @@ export function createBattle(room, map) {
     const towerCenter = tileCenter(map, placement.x, placement.y);
 
     const aiBaseCfg = AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
-    const heroTuning = rp.isAI ? (AI_HERO_TUNING[rp.heroId] || {}) : {};
+    // 6 CPS（噩梦）使用完整英雄平衡表；4 CPS（困难）按基础点击伤害/金币缩放，
+    // 避免困难 AI 随机到苍隼时过强、随机到镜影时过弱。
+    const useHeroTuning = rp.isAI && (aiBaseCfg.cps || 0) >= 4;
+    const rawTuning = useHeroTuning ? (AI_HERO_TUNING[rp.heroId] || {}) : {};
+    const balanceScale = (aiBaseCfg.cps || 0) >= 6 ? 1 : (aiBaseCfg.clickDamage || 0.55) / 0.55;
+    const heroTuning = useHeroTuning
+      ? {
+          ...rawTuning,
+          ...(rawTuning.clickDamage != null
+            ? { clickDamage: (aiBaseCfg.clickDamage || 0.55) * (rawTuning.clickDamage / 0.55) }
+            : {}),
+          ...(rawTuning.startGold != null
+            ? { startGold: Math.round(rawTuning.startGold * ((aiBaseCfg.startGoldBonus || 0) / 250)) }
+            : {}),
+        }
+      : {};
     const scaleRange = (range, scale) => [
       range[0] * (scale || 1),
       range[1] * (scale || 1),
@@ -617,6 +658,7 @@ export function createBattle(room, map) {
       slot,
       color: PLAYER_COLORS[slot % PLAYER_COLORS.length],
       isAI: rp.isAI,
+      team: room.teamMode === 'teams' ? slot % 2 : null,
       connected: rp.connected !== false,
       heroId: null,
       preferredHeroId: HEROES[rp.heroId] ? rp.heroId : null,
@@ -636,6 +678,8 @@ export function createBattle(room, map) {
       towerSerial: 0,
       heroSerial: 0,
       aiControlled: rp.isAI || rp.connected === false,
+      autoSelectNearest: true,
+      manualHeroSelect: false,
       aiClickBudget: 0,
     };
 
@@ -705,7 +749,7 @@ export function applyBattleAction(sim, playerId, action) {
   if (!sim || sim.over) return { ok: false, reason: '战斗已结束' };
   const player = playerOf(sim, playerId);
   if (!player || player.eliminated) return { ok: false, reason: '你已被淘汰' };
-  const hero = player.hero;
+  let hero = player.hero;
   const tower = player.tower;
 
   switch (action.type) {
@@ -714,6 +758,7 @@ export function applyBattleAction(sim, playerId, action) {
       if (!own) return { ok: false, reason: '这不是你的英雄' };
       for (const unit of player.heroes) unit.inputDir = null;
       player.selectedHeroId = own.id;
+      player.manualHeroSelect = true;
       syncSelected(player);
       return { ok: true };
     }
@@ -738,9 +783,14 @@ export function applyBattleAction(sim, playerId, action) {
       }
       return { ok: true };
     }
+    case 'toggleAutoSelect': {
+      player.autoSelectNearest = !player.autoSelectNearest;
+      if (player.autoSelectNearest) player.manualHeroSelect = false;
+      return { ok: true, autoSelectNearest: player.autoSelectNearest };
+    }
     case 'focusFire': {
       const target = entityById(sim, action.kind, action.id);
-      if (!target || !target.alive || target.owner === player.id) {
+      if (!target || !target.alive || !isEnemy(sim, player.id, target.owner)) {
         return { ok: false, reason: '集火目标无效' };
       }
       const living = player.heroes.filter((h) => h.alive);
@@ -770,8 +820,18 @@ export function applyBattleAction(sim, playerId, action) {
       if (!hero) return { ok: false, reason: '尚未召唤英雄' };
       if (!hero.alive) return { ok: false, reason: '英雄尚未复活' };
       const target = entityById(sim, action.kind, action.id);
-      if (!target || !target.alive || target.owner === player.id) {
+      if (!target || !target.alive || !isEnemy(sim, player.id, target.owner)) {
         return { ok: false, reason: '目标无效' };
+      }
+      if (player.autoSelectNearest && !player.manualHeroSelect) {
+        const living = player.heroes.filter((h) => h.alive);
+        const nearest = living.sort((a, b) => distance(a, target) - distance(b, target))[0];
+        if (nearest && nearest.id !== player.selectedHeroId) {
+          for (const unit of player.heroes) unit.inputDir = null;
+          player.selectedHeroId = nearest.id;
+          syncSelected(player);
+          hero = player.hero;
+        }
       }
       const clones = playerClones(sim, player);
       commandAttack(sim, hero, target);
@@ -1434,6 +1494,18 @@ function eliminatePlayer(sim, player) {
 function checkBattleEnd(sim) {
   if (sim.over || sim.tutorial) return;
   const remaining = sim.players.filter((p) => !p.eliminated);
+  if (sim.teamMode) {
+    const teams = [...new Set(remaining.map((p) => p.team).filter((t) => t != null))];
+    if (teams.length <= 1) {
+      const team = teams[0] ?? null;
+      sim.winnerTeam = team;
+      const winners = remaining
+        .filter((p) => p.team === team)
+        .sort((a, b) => scoreOf(b) - scoreOf(a));
+      endBattle(sim, winners[0]?.id ?? null, 'last-standing');
+    }
+    return;
+  }
   if (remaining.length <= 1) {
     const winner = remaining[0] || null;
     endBattle(sim, winner ? winner.id : null, 'last-standing');
@@ -1484,14 +1556,14 @@ export function tickBattle(sim, dt) {
   sim.time += dt;
 
   if (!sim.tutorial && !sim.deathMode) {
-    if (!sim.deathWarned && sim.time >= DEATH_MODE_AT - 30) {
+    if (!sim.deathWarned && sim.time >= sim.deathModeAt - 30) {
       sim.deathWarned = true;
       addEvent(sim, 'announce', {
         text: '30 秒后进入死亡模式：所有魂塔将崩塌，且无法再新建魂塔！',
         tone: 'danger',
       });
     }
-    if (sim.time >= DEATH_MODE_AT) enterDeathMode(sim);
+    if (sim.time >= sim.deathModeAt) enterDeathMode(sim);
     if (sim.over) return;
   }
 
@@ -1573,11 +1645,29 @@ export function tickBattle(sim, dt) {
   // 资源拾取
   collectResources(sim);
 
-  if (!sim.over && !sim.tutorial && sim.time >= MATCH_LIMIT_SECONDS) {
-    const ranked = [...sim.players].sort((a, b) => scoreOf(b) - scoreOf(a));
-    const top = ranked[0];
-    const tie = ranked[1] && Math.abs(scoreOf(ranked[0]) - scoreOf(ranked[1])) < 1;
-    endBattle(sim, tie ? null : top?.id ?? null, 'time-limit');
+  if (!sim.over && !sim.tutorial && sim.time >= sim.matchLimit) {
+    if (sim.teamMode) {
+      const totals = new Map();
+      for (const p of sim.players) {
+        if (p.team == null) continue;
+        totals.set(p.team, (totals.get(p.team) || 0) + scoreOf(p));
+      }
+      const teams = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+      const top = teams[0];
+      const tie = teams[1] && Math.abs(teams[0][1] - teams[1][1]) < 1;
+      sim.winnerTeam = tie ? null : top?.[0] ?? null;
+      const best = !tie && top
+        ? sim.players
+            .filter((p) => p.team === top[0])
+            .sort((a, b) => scoreOf(b) - scoreOf(a))[0]
+        : null;
+      endBattle(sim, tie ? null : best?.id ?? null, 'time-limit');
+    } else {
+      const ranked = [...sim.players].sort((a, b) => scoreOf(b) - scoreOf(a));
+      const top = ranked[0];
+      const tie = ranked[1] && Math.abs(scoreOf(ranked[0]) - scoreOf(ranked[1])) < 1;
+      endBattle(sim, tie ? null : top?.id ?? null, 'time-limit');
+    }
   }
 }
 
@@ -1773,7 +1863,7 @@ function updateSummon(sim, unit, dt) {
         unit.target = { kind: target.kind, id: target.id };
         unit.chase = true;
       } else {
-        const towers = sim.towers.filter((t) => t.alive && t.owner !== unit.owner);
+        const towers = sim.towers.filter((t) => t.alive && isEnemy(sim, unit.owner, t.owner));
         const tower = closest(unit, towers);
         if (tower) {
           target = tower;
@@ -1818,7 +1908,7 @@ function updateTower(sim, tower, dt) {
   let best = null;
   let bestDist = Infinity;
   for (const hero of [...sim.heroes, ...sim.summons]) {
-    if (!hero.alive || hero.owner === tower.owner) continue;
+    if (!hero.alive || !isEnemy(sim, tower.owner, hero.owner)) continue;
     const d = distance(tower, hero);
     if (d <= tower.cannonRange && d < bestDist) {
       best = hero;
@@ -1872,8 +1962,8 @@ function aiThink(sim, p, ai) {
   if (!hero || !hero.alive) return;
   const cfg = ai.cfg || AI_LEVELS[sim.aiLevel] || AI_LEVELS.normal;
 
-  const enemyHeroes = sim.heroes.filter((h) => h.alive && h.owner !== p.id);
-  const enemyTowers = sim.towers.filter((t) => t.alive && t.owner !== p.id);
+  const enemyHeroes = sim.heroes.filter((h) => h.alive && isEnemy(sim, p.id, h.owner));
+  const enemyTowers = sim.towers.filter((t) => t.alive && isEnemy(sim, p.id, t.owner));
   const nearestHero = chooseAIHeroTarget(hero, enemyHeroes, cfg);
   const lowHp = hero.hp / hero.maxHp < cfg.retreat;
   const earlyGame = sim.time < 20;
@@ -2203,9 +2293,12 @@ export function serializeSim(sim, consumeEvents = true) {
       slot: p.slot,
       color: p.color,
       isAI: p.isAI,
+      team: p.team ?? null,
       passive: !!p.passive,
       connected: p.connected,
       aiControlled: p.aiControlled,
+      autoSelectNearest: p.autoSelectNearest !== false,
+      manualHeroSelect: !!p.manualHeroSelect,
       heroId: p.heroId,
       selectedHeroId: p.selectedHeroId,
       selectedTowerId: tower ? tower.id : null,
@@ -2353,13 +2446,15 @@ export function serializeSim(sim, consumeEvents = true) {
   return {
     startedAt: sim.startedAt,
     time: Math.floor(sim.time * 10) / 10,
-    timeLimit: MATCH_LIMIT_SECONDS,
+    timeLimit: sim.matchLimit,
     over: sim.over,
     winner: sim.winner,
     endReason: sim.endReason,
+    teamMode: !!sim.teamMode,
+    winnerTeam: sim.winnerTeam ?? null,
     deathMode: !!sim.deathMode,
     deathModeAt: sim.deathModeAt || 0,
-    deathModeIn: Math.max(0, Math.ceil(DEATH_MODE_AT - sim.time)),
+    deathModeIn: Math.max(0, Math.ceil(sim.deathModeAt - sim.time)),
     players,
     heroes,
     towers,

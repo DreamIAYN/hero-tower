@@ -56,6 +56,10 @@ const els = {
   app: $('#app'),
   stage: $('#stage'),
   canvas: $('#game'),
+  mapZoomOut: $('#map-zoom-out'),
+  mapZoomIn: $('#map-zoom-in'),
+  mapCenter: $('#map-center'),
+  mapHand: $('#map-hand'),
   commandPanel: $('.command-panel'),
   mobilePanelToggle: $('#mobile-panel-toggle'),
   mobileControls: $('#mobile-controls'),
@@ -153,6 +157,7 @@ const els = {
 
   skillButton: $('#skill-button'),
   kiteButton: $('#kite-button'),
+  autoSelectButton: $('#auto-select-button'),
   mobileKite: $('#mobile-kite'),
   skillCd: $('#skill-cd'),
   skillName: $('#skill-name'),
@@ -187,6 +192,8 @@ const els = {
   codeInput: $('#code-input'),
   joinBtn: $('#join-btn'),
   startAiLevel: $('#start-ai-level'),
+  startMapSize: $('#start-map-size'),
+  startTeamMode: $('#start-team-mode'),
   startError: $('#start-error'),
 
   lobbyCode: $('#lobby-code'),
@@ -194,6 +201,9 @@ const els = {
   lobbySlots: $('#lobby-slots'),
   slotChoice: $('#slot-choice'),
   lobbyAiLevel: $('#lobby-ai-level'),
+  lobbyMapSize: $('#lobby-map-size'),
+  lobbyTeamMode: $('#lobby-team-mode'),
+  lobbySideMode: $('#lobby-side-mode'),
   startGameBtn: $('#start-game-btn'),
   leaveLobbyBtn: $('#leave-lobby-btn'),
   lobbyNote: $('#lobby-note'),
@@ -243,7 +253,9 @@ const app = {
   mapCanvas: null,
   mapCanvasKey: '',
 
-  view: { w: 1, h: 1, dpr: 1, scale: 1, ox: 0, oy: 0 },
+  view: { w: 1, h: 1, dpr: 1, scale: 1, ox: 0, oy: 0, zoom: 1, camX: null, camY: null, battleCentered: false },
+  canvasPointer: null,
+  panMode: false,
   mouse: { x: 0, y: 0, worldX: 0, worldY: 0, over: false, tile: null },
   visuals: new Map(),
   effects: [],
@@ -273,6 +285,8 @@ const app = {
   toastCount: 0,
   lastAutoMsg: 0,
   aiLevel: 'normal',
+  mapSize: 'standard',
+  teamMode: 'ffa',
   spectator: false,
   replayMode: false,
   replay: null,
@@ -282,6 +296,8 @@ const app = {
 const sessionKey = 'tower-souls-session-v1';
 const nameKey = 'tower-souls-name-v1';
 const aiLevelKey = 'tower-souls-ai-level-v1';
+const mapSizeKey = 'tower-souls-map-size-v1';
+const teamModeKey = 'tower-souls-team-mode-v1';
 let recoveryProbeTimer = null;
 let recoveryProbeAttempts = 0;
 
@@ -296,6 +312,8 @@ function init() {
   buildMapCanvas(app.demoMap);
   els.nameInput.value = localStorage.getItem(nameKey) || randomName();
   app.aiLevel = readAILevelPreference();
+  app.mapSize = readMapSizePreference();
+  app.teamMode = readTeamModePreference();
   bindEvents();
   updateAILevelButtons();
   app.mobile = isMobileTouch();
@@ -574,6 +592,10 @@ function applyMap(map) {
     app.effects = [];
   }
   app.map = map;
+  app.view.zoom = map.w > 50 ? 2 : 1;
+  app.view.camX = (map.center.x + 0.5) * map.tile;
+  app.view.camY = (map.center.y + 0.5) * map.tile;
+  app.view.battleCentered = false;
   buildMapCanvas(map);
   resizeCanvas();
 }
@@ -647,6 +669,30 @@ function toggleKiteMode() {
     if (!r.ok) return;
     showToast(r.kite ? '保持距离：开启 · 攻击时自动后撤' : '保持距离：关闭', 'gold', 1600);
   });
+}
+
+function toggleAutoSelectMode() {
+  const state = app.state;
+  const me = myPlayer();
+  if (!state || state.phase !== 'battle' || state.paused || !me || me.eliminated) return;
+  sendAction({ type: 'toggleAutoSelect' }, { silent: true }).then((r) => {
+    if (!r.ok) return;
+    showToast(r.autoSelectNearest ? '自动选人：开启 · 点击敌人自动选最近英雄' : '自动选人：关闭', 'gold', 1800);
+  });
+}
+
+function updateAutoSelectButton() {
+  const me = myPlayer();
+  const state = app.state;
+  const enabled = me?.autoSelectNearest !== false;
+  const disabled = !me || me.eliminated || !state || state.phase !== 'battle' || state.paused || state.battle?.over;
+  els.autoSelectButton.classList.toggle('active', enabled);
+  els.autoSelectButton.disabled = disabled;
+  els.autoSelectButton.title = !enabled
+    ? '自动选人：关闭'
+    : me?.manualHeroSelect
+      ? '自动选人：开启；当前手动指定了英雄，关闭再开启可恢复自动'
+      : '自动选人：开启；点击敌人自动选择最近英雄';
 }
 
 function updateKiteButton() {
@@ -912,6 +958,30 @@ function bindEvents() {
     try { localStorage.setItem(aiLevelKey, app.aiLevel); } catch { /* noop */ }
     updateAILevelButtons();
   });
+  els.startMapSize.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-map-size]');
+    if (!btn) return;
+    app.mapSize = btn.dataset.mapSize === 'large' ? 'large' : 'standard';
+    try { localStorage.setItem(mapSizeKey, app.mapSize); } catch { /* noop */ }
+    updateModeButtons();
+  });
+  els.startTeamMode.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-team-mode]');
+    if (!btn) return;
+    app.teamMode = btn.dataset.teamMode === 'teams' ? 'teams' : 'ffa';
+    try { localStorage.setItem(teamModeKey, app.teamMode); } catch { /* noop */ }
+    updateModeButtons();
+  });
+  els.lobbyMapSize.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-map-size]');
+    if (!btn || !isHost()) return;
+    sendAction({ type: 'setMapSize', value: btn.dataset.mapSize });
+  });
+  els.lobbyTeamMode.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-team-mode]');
+    if (!btn || !isHost()) return;
+    sendAction({ type: 'setTeamMode', value: btn.dataset.teamMode });
+  });
   els.lobbyAiLevel.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-ai-level]');
     if (!btn || !isHost()) return;
@@ -948,6 +1018,7 @@ function bindEvents() {
   els.pauseResumeBtn.addEventListener('click', togglePause);
   els.focusButton.addEventListener('click', toggleFocusMode);
   els.kiteButton.addEventListener('click', toggleKiteMode);
+  els.autoSelectButton.addEventListener('click', toggleAutoSelectMode);
   els.mobileKite.addEventListener('click', toggleKiteMode);
   els.mobilePanelToggle.addEventListener('click', toggleMobilePanel);
   els.mobileSwap.addEventListener('click', swapMobileHero);
@@ -1003,7 +1074,20 @@ function bindEvents() {
     els.hoverTip.classList.add('hidden');
   });
   els.canvas.addEventListener('pointerdown', onCanvasDown);
+  els.canvas.addEventListener('pointerup', onCanvasUp);
+  els.canvas.addEventListener('pointercancel', onCanvasCancel);
   els.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  els.mapZoomOut.addEventListener('click', () => zoomViewAt(app.view.zoom / 1.25, app.view.w / 2, app.view.h / 2));
+  els.mapZoomIn.addEventListener('click', () => zoomViewAt(app.view.zoom * 1.25, app.view.w / 2, app.view.h / 2));
+  els.mapCenter.addEventListener('click', centerCameraOnPlayer);
+  els.mapHand.addEventListener('click', togglePanMode);
+  els.canvas.addEventListener('wheel', (e) => {
+    if (!currentMap()) return;
+    e.preventDefault();
+    const rect = els.canvas.getBoundingClientRect();
+    const factor = e.deltaY > 0 ? 1 / 1.14 : 1.14;
+    zoomViewAt(app.view.zoom * factor, e.clientX - rect.left, e.clientY - rect.top);
+  }, { passive: false });
 
   els.helpBtn.addEventListener('click', () => {
     els.helpModal.classList.remove('hidden');
@@ -1066,16 +1150,44 @@ function updateAILevelButtons() {
   for (const btn of $$('#start-ai-level button')) {
     btn.classList.toggle('active', btn.dataset.aiLevel === app.aiLevel);
   }
+  updateModeButtons();
+}
+
+function updateModeButtons() {
+  for (const btn of $$('#start-map-size button')) {
+    btn.classList.toggle('active', btn.dataset.mapSize === app.mapSize);
+  }
+  for (const btn of $$('#start-team-mode button')) {
+    btn.classList.toggle('active', btn.dataset.teamMode === app.teamMode);
+  }
   const names = { easy: '休闲', normal: '标准', hard: '困难', nightmare: '噩梦' };
+  const maps = { standard: '标准图', large: '大地图' };
+  const modes = { ffa: '自由混战', teams: '团队 2v2' };
   const small = els.quickBtn?.querySelector('small');
-  if (small) small.textContent = `你 + 3 名 AI · ${names[app.aiLevel] || '标准'}`;
+  if (small) small.textContent = `你 + 3 名 AI · ${names[app.aiLevel] || '标准'} · ${maps[app.mapSize] || '标准图'} · ${modes[app.teamMode] || '自由混战'}`;
+}
+
+function readMapSizePreference() {
+  try {
+    const v = localStorage.getItem(mapSizeKey);
+    if (v === 'large' || v === 'standard') return v;
+  } catch { /* noop */ }
+  return 'standard';
+}
+
+function readTeamModePreference() {
+  try {
+    const v = localStorage.getItem(teamModeKey);
+    if (v === 'teams' || v === 'ffa') return v;
+  } catch { /* noop */ }
+  return 'ffa';
 }
 
 async function quickPlay() {
   clearStartError();
   startBusy(els.quickBtn, '正在集结 AI…');
   try {
-    const data = await api('/api/quick', { name: readName(), aiLevel: app.aiLevel });
+    const data = await api('/api/quick', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode });
     if (!data.ok) {
       showStartError(data.error || '创建失败');
       return;
@@ -1110,7 +1222,7 @@ async function startSpectate() {
   clearStartError();
   startBusy(els.spectateAiBtn, '正在创建观战局…');
   try {
-    const data = await api('/api/spectate', { name: readName(), aiLevel: app.aiLevel });
+    const data = await api('/api/spectate', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode });
     if (!data.ok) {
       showStartError(data.error || '观战房间创建失败');
       return;
@@ -1129,7 +1241,7 @@ async function createRoom() {
   clearStartError();
   startBusy(els.createBtn, '创建中…');
   try {
-    const data = await api('/api/create', { name: readName(), aiLevel: app.aiLevel });
+    const data = await api('/api/create', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode });
     if (!data.ok) {
       showStartError(data.error || '创建失败');
       return;
@@ -1549,6 +1661,7 @@ function updatePlayerList() {
     const tags = [
       isMe ? '<span class="tag you">你</span>' : '',
       isHostPlayer ? '<span class="tag host">房主</span>' : '',
+      state.teamMode === 'teams' && p.team != null ? `<span class="tag team">队${p.team + 1}</span>` : '',
       p.isAI ? '<span class="tag ai">AI</span>' : '',
       p.aiControlled && !p.isAI ? '<span class="tag ai">托管</span>' : '',
     ]
@@ -1785,6 +1898,7 @@ function updateBattleUI() {
   els.focusButton.disabled = !anyHeroAlive || me.eliminated || battle.over || state.paused;
   updateFocusButton();
   updateKiteButton();
+  updateAutoSelectButton();
   updatePauseUI();
   updateMobileUI();
 }
@@ -1974,7 +2088,7 @@ function updateLobbyUI() {
   els.lobbyCode.textContent = app.code || '----';
   const host = state.hostId === app.playerId;
   const sorted = [...state.players].sort((a, b) => a.slot - b.slot);
-  const sig = `${state.maxPlayers}|${sorted.map((p) => `${p.id}:${p.name}:${p.connected}`).join(',')}|${state.hostId}`;
+  const sig = `${state.maxPlayers}|${state.mapSize}|${state.teamMode}|${sorted.map((p) => `${p.id}:${p.name}:${p.connected}:${p.team}`).join(',')}|${state.hostId}`;
   if (sig !== app.lobbySig) {
     app.lobbySig = sig;
     const slots = [];
@@ -1984,6 +2098,7 @@ function updateLobbyUI() {
         const tags = [];
         if (p.id === state.hostId) tags.push('房主');
         if (p.id === app.playerId) tags.push('你');
+        if (state.teamMode === 'teams' && p.team != null) tags.push(`队伍 ${p.team + 1}`);
         if (!p.connected) tags.push('掉线');
         slots.push(`
           <div class="lobby-slot" style="--sc:${esc(p.color)}">
@@ -2010,6 +2125,14 @@ function updateLobbyUI() {
     btn.classList.toggle('active', btn.dataset.aiLevel === (state.aiLevel || 'normal'));
     btn.disabled = !host;
   }
+  for (const btn of $$('#lobby-map-size button')) {
+    btn.classList.toggle('active', btn.dataset.mapSize === (state.mapSize || 'standard'));
+    btn.disabled = !host;
+  }
+  for (const btn of $$('#lobby-team-mode button')) {
+    btn.classList.toggle('active', btn.dataset.teamMode === (state.teamMode || 'ffa'));
+    btn.disabled = !host;
+  }
   els.startGameBtn.disabled = !host;
   const emptySlots = state.maxPlayers - state.players.length;
   els.startGameBtn.innerHTML = host
@@ -2017,11 +2140,14 @@ function updateLobbyUI() {
     : `等待房主开始 <small>${state.players.length}/${state.maxPlayers} 人已就位</small>`;
   els.startGameBtn.classList.toggle('secondary', !host);
   const levelName = { easy: '休闲', normal: '标准', hard: '困难', nightmare: '噩梦' }[state.aiLevel || 'normal'] || '标准';
+  const mapName = state.mapSize === 'large' ? '大地图 96×72' : '标准图 40×30';
+  const modeName = state.teamMode === 'teams' ? '团队 2v2' : '自由混战';
   els.lobbyNote.textContent = host
-    ? `AI 难度：${levelName}。把房间号发给朋友，或者直接开始让 AI 加入战局。`
-    : `房主开始后，所有玩家进入魂塔部署阶段。当前 AI 难度：${levelName}。`;
+    ? `${mapName} · ${modeName} · AI 难度：${levelName}。把房间号发给朋友，或者直接开始让 AI 加入战局。`
+    : `房主开始后，所有玩家进入魂塔部署阶段。${mapName} · ${modeName} · AI 难度：${levelName}。`;
   els.lobbySideSlots.textContent = `${state.players.length} / ${state.maxPlayers}`;
-  els.lobbySideText.textContent = host ? '你可以调整人数，空位会自动由 AI 补足。' : '等待房主调整人数并开始战斗。';
+  if (els.lobbySideMode) els.lobbySideMode.textContent = modeName;
+  els.lobbySideText.textContent = host ? '你可以调整人数、地图和模式，空位会自动由 AI 补足。' : '等待房主调整设置并开始战斗。';
 }
 
 /* ================================================================== */
@@ -2074,29 +2200,38 @@ function updateEndUI() {
   const state = app.state;
   if (!state || state.phase !== 'ended' || !state.result) return;
   const result = state.result;
-  const sig = `${result.winnerId}|${result.reason}|${result.replayId || ''}|${result.ranking?.map((r) => `${r.id}:${r.kills}:${r.eliminated}`).join(',')}`;
+  const sig = `${result.winnerId}|${result.winnerTeam}|${result.teamMode}|${result.reason}|${result.replayId || ''}|${result.ranking?.map((r) => `${r.id}:${r.kills}:${r.eliminated}:${r.team}`).join(',')}`;
   if (sig === app.endSig) {
     els.rematchBtn.classList.toggle('hidden', !isHost());
     els.endReplayBtn.classList.toggle('hidden', !result.replayId);
     return;
   }
   app.endSig = sig;
-  const mine = result.winnerId === app.playerId;
-  els.endTitle.textContent = mine ? '你赢得了四境' : result.winnerName ? `${result.winnerName} 获胜` : '平局';
+  const me = myPlayer();
+  const mine = result.teamMode
+    ? result.winnerTeam != null && me?.team === result.winnerTeam
+    : result.winnerId === app.playerId;
+  els.endTitle.textContent = mine
+    ? result.teamMode
+      ? '你的队伍赢得了四境'
+      : '你赢得了四境'
+    : result.winnerName
+      ? `${result.winnerName} 获胜`
+      : '平局';
   els.endTitle.style.color = mine ? 'var(--gold)' : '';
   els.endWinner.innerHTML = `
     <div class="end-crown">${mine ? '冠' : '塔'}</div>
     <div>
       <b>${esc(result.winnerName || '无人幸存')}</b>
-      <span>${result.reason === 'time-limit' ? '12 分钟战绩结算' : '最后幸存的魂塔与英雄'} · 战斗时长 ${fmtTime(result.time)}</span>
+      <span>${result.reason === 'time-limit' ? `${Math.round((result.timeLimit || 720) / 60)} 分钟战绩结算` : '最后幸存的魂塔与英雄'} · 战斗时长 ${fmtTime(result.time)}</span>
     </div>
   `;
   els.endRanking.innerHTML = (result.ranking || [])
     .map(
       (r) => `
-      <div class="rank-row ${r.id === result.winnerId ? 'winner' : ''}">
+      <div class="rank-row ${result.teamMode ? (r.team === result.winnerTeam ? 'winner' : '') : (r.id === result.winnerId ? 'winner' : '')}">
         <span class="rk">#${r.rank}</span>
-        <span class="rname" style="color:${esc(r.color)}">${esc(r.name)}${r.id === app.playerId ? ' · 你' : ''}</span>
+        <span class="rname" style="color:${esc(r.color)}">${esc(r.name)}${r.id === app.playerId ? ' · 你' : ''}${result.teamMode && r.team != null ? ` · 队${r.team + 1}` : ''}</span>
         <span class="rstat">${r.kills} 击杀</span>
         <span class="rstat">${r.eliminated ? '淘汰' : r.towerAlive ? '塔在' : '无塔'}</span>
       </div>
@@ -2106,6 +2241,11 @@ function updateEndUI() {
   els.rematchBtn.classList.toggle('hidden', !isHost());
   els.endReplayBtn.classList.toggle('hidden', !result.replayId);
   els.endNote.textContent = isHost() ? '你可以重开一局，其他玩家会回到大厅。' : '等待房主重开一局。';
+  if (result.teamMode) {
+    els.endNote.textContent = isHost()
+      ? '团队模式结算。你可以重开一局，其他玩家会回到大厅。'
+      : '团队模式结算。等待房主重开一局。';
+  }
 }
 
 /* ================================================================== */
@@ -2654,6 +2794,21 @@ function updatePointerFromEvent(e) {
 }
 
 function onPointerMove(e) {
+  const drag = app.canvasPointer;
+  if (drag && drag.id === e.pointerId) {
+    const total = Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY);
+    if (!drag.moved && total > 6) drag.moved = true;
+    if (drag.moved) {
+      panViewBy(e.clientX - drag.lastX, e.clientY - drag.lastY);
+      drag.lastX = e.clientX;
+      drag.lastY = e.clientY;
+      updatePointerFromEvent(e);
+      els.hoverTip.classList.add('hidden');
+      return;
+    }
+    drag.lastX = e.clientX;
+    drag.lastY = e.clientY;
+  }
   updatePointerFromEvent(e);
   if (e.pointerType === 'touch') {
     els.hoverTip.classList.add('hidden');
@@ -2662,8 +2817,71 @@ function onPointerMove(e) {
   }
 }
 
+function togglePanMode() {
+  app.panMode = !app.panMode;
+  els.mapHand.classList.toggle('active', app.panMode);
+  els.stage.classList.toggle('pan-mode', app.panMode);
+  showToast(app.panMode ? '拖动地图：开启，左键拖动地图，不再攻击/移动' : '拖动地图：关闭，左键恢复攻击/移动', 'gold', 1800);
+}
+
+function startCanvasPan(e, allowClick) {
+  app.canvasPointer = {
+    id: e.pointerId,
+    startX: e.clientX,
+    startY: e.clientY,
+    lastX: e.clientX,
+    lastY: e.clientY,
+    moved: false,
+    allowClick,
+  };
+  if (e.pointerType === 'touch') {
+    e.preventDefault();
+    els.hoverTip.classList.add('hidden');
+  }
+  try {
+    els.canvas.setPointerCapture(e.pointerId);
+  } catch {
+    /* noop */
+  }
+}
+
 function onCanvasDown(e) {
-  if (e.button !== 0) return;
+  if (!app.state) return;
+  const panButton = e.button === 1 || e.button === 2;
+  if (e.button === 0 && !app.panMode) {
+    // 战斗点击立即执行，拖动地图改用右键/中键或“手”模式，避免攻击时误拖。
+    performCanvasClick(e);
+    return;
+  }
+  if (e.button === 0 || panButton) {
+    e.preventDefault();
+    updatePointerFromEvent(e);
+    startCanvasPan(e, false);
+  }
+}
+
+function onCanvasUp(e) {
+  const pointer = app.canvasPointer;
+  if (!pointer || pointer.id !== e.pointerId) return;
+  app.canvasPointer = null;
+  try {
+    els.canvas.releasePointerCapture(e.pointerId);
+  } catch {
+    /* noop */
+  }
+}
+
+function onCanvasCancel(e) {
+  if (!app.canvasPointer || app.canvasPointer.id !== e.pointerId) return;
+  app.canvasPointer = null;
+  try {
+    els.canvas.releasePointerCapture(e.pointerId);
+  } catch {
+    /* noop */
+  }
+}
+
+function performCanvasClick(e) {
   if (app.wasd.size) clearWasd();
   if (!app.state) return;
   const phase = app.state.phase;
@@ -2822,6 +3040,11 @@ function onKeyDown(e) {
   }
   if (e.key === '?' || (e.key === 'h' && !e.metaKey && !e.ctrlKey)) {
     els.helpModal.classList.toggle('hidden');
+    return;
+  }
+  if (e.key.toLowerCase() === 't' && !e.repeat) {
+    if (!els.helpModal.classList.contains('hidden')) return;
+    toggleAutoSelectMode();
     return;
   }
   if (e.key.toLowerCase() === 'k' && !e.repeat) {
@@ -3294,15 +3517,73 @@ function resizeCanvas() {
     els.canvas.width = targetW;
     els.canvas.height = targetH;
   }
+  applyView();
+}
+
+function fitScaleFor(map) {
+  if (!map) return 1;
+  return Math.min(app.view.w / (map.w * map.tile), app.view.h / (map.h * map.tile)) * 0.995;
+}
+
+function clampView() {
   const map = currentMap();
-  if (map) {
-    const worldW = map.w * map.tile;
-    const worldH = map.h * map.tile;
-    const scale = Math.min(w / worldW, h / worldH) * 0.995;
-    app.view.scale = scale;
-    app.view.ox = (w - worldW * scale) / 2;
-    app.view.oy = (h - worldH * scale) / 2;
+  if (!map) return;
+  const worldW = map.w * map.tile;
+  const worldH = map.h * map.tile;
+  const sw = worldW * app.view.scale;
+  const sh = worldH * app.view.scale;
+  if (sw <= app.view.w) app.view.ox = (app.view.w - sw) / 2;
+  else app.view.ox = Math.max(app.view.w - sw, Math.min(0, app.view.ox));
+  if (sh <= app.view.h) app.view.oy = (app.view.h - sh) / 2;
+  else app.view.oy = Math.max(app.view.h - sh, Math.min(0, app.view.oy));
+  app.view.camX = (app.view.w / 2 - app.view.ox) / app.view.scale;
+  app.view.camY = (app.view.h / 2 - app.view.oy) / app.view.scale;
+}
+
+function applyView() {
+  const map = currentMap();
+  if (!map || !app.view.w) return;
+  const fit = fitScaleFor(map);
+  app.view.zoom = Math.max(1, Math.min(4, app.view.zoom || 1));
+  app.view.scale = fit * app.view.zoom;
+  if (app.view.camX == null || app.view.camY == null) {
+    app.view.camX = map.center.x * map.tile;
+    app.view.camY = map.center.y * map.tile;
   }
+  app.view.ox = app.view.w / 2 - app.view.camX * app.view.scale;
+  app.view.oy = app.view.h / 2 - app.view.camY * app.view.scale;
+  clampView();
+}
+
+function panViewBy(dx, dy) {
+  app.view.ox += dx;
+  app.view.oy += dy;
+  clampView();
+}
+
+function zoomViewAt(nextZoom, sx, sy) {
+  const map = currentMap();
+  if (!map) return;
+  const before = screenToWorld(sx, sy);
+  app.view.zoom = Math.max(1, Math.min(4, nextZoom));
+  app.view.scale = fitScaleFor(map) * app.view.zoom;
+  app.view.ox = sx - before.x * app.view.scale;
+  app.view.oy = sy - before.y * app.view.scale;
+  clampView();
+}
+
+function centerCameraOnPlayer() {
+  const battle = app.state?.battle;
+  const me = battle?.players?.find((p) => p.id === app.playerId);
+  const hero = me ? battle.heroes?.find((h) => h.owner === app.playerId && h.alive) : null;
+  const tower = me ? battle.towers?.find((t) => t.owner === app.playerId && t.alive) : null;
+  const map = currentMap();
+  const x = hero?.x ?? tower?.x ?? (map ? (map.center.x + 0.5) * map.tile : 0);
+  const y = hero?.y ?? tower?.y ?? (map ? (map.center.y + 0.5) * map.tile : 0);
+  if (!map) return;
+  app.view.camX = x;
+  app.view.camY = y;
+  applyView();
 }
 
 function currentMap() {
@@ -3518,7 +3799,7 @@ function drawGhostTower(sx, sy, color, alpha, heroId) {
     if (def) {
       ctx.globalAlpha = alpha;
       ctx.fillStyle = 'rgba(240,250,255,0.75)';
-      ctx.font = `600 ${Math.max(7, r * 0.62)}px ${CJK_FONT}`;
+      ctx.font = `600 ${Math.max(9, r * 0.7)}px ${CJK_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(def.icon, sx, sy + 0.5);
@@ -3585,7 +3866,7 @@ function drawResources() {
       ctx.textBaseline = 'middle';
       ctx.fillText('¤', p.x, p.y + 0.5);
       ctx.fillStyle = 'rgba(255,207,107,0.75)';
-      ctx.font = '8px Consolas, monospace';
+      ctx.font = '10px Consolas, monospace';
       ctx.fillText(`+${n.gold}`, p.x, p.y + 19);
     } else {
       const total = n.respawnTotal || app.catalog?.resourceRespawn || 16;
@@ -3603,7 +3884,7 @@ function drawResources() {
       ctx.arc(p.x, p.y, 10, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - frac));
       ctx.stroke();
       ctx.fillStyle = 'rgba(255,207,107,0.45)';
-      ctx.font = '7px Consolas, monospace';
+      ctx.font = '9px Consolas, monospace';
       ctx.textAlign = 'center';
       ctx.fillText(`${respawn}s`, p.x, p.y + 18);
     }
@@ -3739,7 +4020,7 @@ function drawTowers() {
     drawBar(p.x - bw / 2, p.y - r - 13, bw, 4, tower.hp / tower.maxHp, color, `${tower.level}`);
     // 名字
     ctx.fillStyle = 'rgba(202,224,232,0.72)';
-    ctx.font = `8px ${CJK_FONT}`;
+    ctx.font = `10px ${CJK_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     const owner = playerById(tower.owner);
@@ -3818,7 +4099,7 @@ function drawSummons() {
       ctx.arc(p.x, p.y, r - 1, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = color;
-      ctx.font = `700 ${Math.max(7, r * 0.95)}px ${CJK_FONT}`;
+      ctx.font = `700 ${Math.max(9, r * 1.0)}px ${CJK_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(unit.icon || '镜', p.x, p.y + 0.5);
@@ -3841,7 +4122,7 @@ function drawSummons() {
       ctx.fill();
       if (isHover) {
         ctx.fillStyle = rgba(color, 0.95);
-        ctx.font = `7px ${CJK_FONT}`;
+        ctx.font = `9px ${CJK_FONT}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
         ctx.fillText(unit.name, p.x, p.y - r - 5);
@@ -3857,7 +4138,7 @@ function drawSummons() {
     ctx.stroke();
     if (isClone) {
       ctx.fillStyle = 'rgba(232,247,250,0.75)';
-      ctx.font = `7px ${CJK_FONT}`;
+      ctx.font = `9px ${CJK_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       ctx.fillText(unit.name, p.x, p.y + r + 3);
@@ -3948,7 +4229,7 @@ function drawHeroes() {
 
     if (def) {
       ctx.fillStyle = def.color;
-      ctx.font = `700 ${Math.max(8, r * 1.02)}px ${CJK_FONT}`;
+      ctx.font = `700 ${Math.max(10, r * 1.05)}px ${CJK_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(def.icon, p.x, p.y + 0.5);
@@ -4006,7 +4287,7 @@ function drawHeroes() {
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = '#07131c';
-      ctx.font = `700 7px ${CJK_FONT}`;
+      ctx.font = `700 9px ${CJK_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('你', bx + 6.5, by + 5.1);
@@ -4014,7 +4295,7 @@ function drawHeroes() {
     }
     if (isSelected) {
       ctx.fillStyle = 'rgba(232,247,250,0.9)';
-      ctx.font = `8px ${CJK_FONT}`;
+      ctx.font = `10px ${CJK_FONT}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       ctx.shadowBlur = 4;
@@ -4047,7 +4328,7 @@ function drawBar(x, y, w, h, frac, color, levelText) {
   }
   if (levelText) {
     ctx.fillStyle = 'rgba(224,240,244,0.82)';
-    ctx.font = '7px Consolas, monospace';
+    ctx.font = '9px Consolas, monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
     ctx.fillText(`Lv${levelText}`, x, y - 2);
@@ -4150,7 +4431,7 @@ function drawTutorialTargets() {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = 'rgba(255, 207, 107, 0.95)';
-    ctx.font = `8px ${CJK_FONT}`;
+    ctx.font = `10px ${CJK_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText('训练木桩', p.x, p.y - r - 5);
@@ -4201,7 +4482,7 @@ function drawFocusMark() {
     ctx.stroke();
   }
   ctx.fillStyle = 'rgba(255, 160, 150, 0.95)';
-  ctx.font = `7px ${CJK_FONT}`;
+  ctx.font = `9px ${CJK_FONT}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
   ctx.fillText('集火', p.x, p.y - r - 3);
@@ -4320,6 +4601,8 @@ function replayFrameAt(time) {
       endReason: a.endReason,
       deathMode: !!a.deathMode,
       deathModeAt: a.deathModeAt || 0,
+      teamMode: !!a.teamMode,
+      winnerTeam: a.winnerTeam ?? null,
       players: a.players,
       heroes: blend('heroes'),
       towers: blend('towers'),
@@ -4331,6 +4614,7 @@ function replayFrameAt(time) {
     paused: false,
     canPause: false,
     tutorial: false,
+    teamMode: !!a.teamMode,
     mapSeed: app.replay.data.map?.seed,
     replay: true,
   };

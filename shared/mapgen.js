@@ -61,6 +61,10 @@ const NODE_ANCHORS = [
   { x: 26, y: 15 },
   { x: 20, y: 11 },
   { x: 20, y: 19 },
+  { x: 13, y: 8 },
+  { x: 27, y: 8 },
+  { x: 13, y: 22 },
+  { x: 27, y: 22 },
 ];
 
 function mulberry32(seed) {
@@ -226,7 +230,7 @@ function reachableFrom(tiles, start) {
   return seen;
 }
 
-export function generateMap(seed = Math.floor(Math.random() * 2 ** 31)) {
+function generateBaseMap(seed = Math.floor(Math.random() * 2 ** 31)) {
   const rng = mulberry32(seed);
   const tiles = new Array(MAP_W * MAP_H).fill(TERRAIN.PLAIN);
 
@@ -372,6 +376,186 @@ export function generateMap(seed = Math.floor(Math.random() * 2 ** 31)) {
     nodes,
     center: CENTER,
   };
+}
+
+
+/* ------------------------------------------------------------------ */
+/* 地图尺寸：标准 40×30 / 大地图 56×42                                  */
+/* ------------------------------------------------------------------ */
+
+const LARGE_W = 96;
+const LARGE_H = 72;
+
+function scaledMap(base, seed) {
+  const w = LARGE_W;
+  const h = LARGE_H;
+  // 大地图暂时使用全平地：不使用山地/水域/森林/丘陵。
+  const tiles = new Array(w * h).fill(TERRAIN.PLAIN);
+  const map = {
+    version: 2,
+    size: 'large',
+    flat: true,
+    seed,
+    w,
+    h,
+    tile: TILE,
+    tiles,
+    spawns: [],
+    nodes: [],
+    center: { x: Math.round((base.center.x / base.w) * w), y: Math.round((base.center.y / base.h) * h) },
+  };
+  const sx = w / base.w;
+  const sy = h / base.h;
+  map.spawns = base.spawns.map((spawn) => ({
+    ...spawn,
+    cx: Math.round(spawn.cx * sx),
+    cy: Math.round(spawn.cy * sy),
+    zone: {
+      x0: Math.round(spawn.zone.x0 * sx),
+      y0: Math.round(spawn.zone.y0 * sy),
+      x1: Math.round(spawn.zone.x1 * sx),
+      y1: Math.round(spawn.zone.y1 * sy),
+    },
+    default: {
+      x: Math.round(spawn.default.x * sx),
+      y: Math.round(spawn.default.y * sy),
+    },
+  }));
+
+  const paint = (tx, ty, type = TERRAIN.PLAIN) => {
+    if (tx < 1 || ty < 1 || tx >= w - 1 || ty >= h - 1) return;
+    tiles[ty * w + tx] = type;
+  };
+  const disc = (cx, cy, radius) => {
+    const r = Math.ceil(radius);
+    for (let y = cy - r; y <= cy + r; y++) {
+      for (let x = cx - r; x <= cx + r; x++) {
+        if ((x - cx) ** 2 + (y - cy) ** 2 <= radius * radius) paint(x, y, TERRAIN.PLAIN);
+      }
+    }
+  };
+  const corridor = (from, to, radius = 1.7) => {
+    let x = from.x;
+    let y = from.y;
+    let guard = 0;
+    while ((x !== to.x || y !== to.y) && guard++ < 300) {
+      disc(x, y, radius);
+      if (x !== to.x) x += Math.sign(to.x - x);
+      if (y !== to.y) y += Math.sign(to.y - y);
+    }
+    disc(to.x, to.y, radius);
+  };
+  const passable = (x, y) => {
+    if (x < 0 || y < 0 || x >= w || y >= h) return false;
+    return TERRAIN_INFO[tiles[y * w + x]].passable;
+  };
+  const findSpot = (tx, ty, maxRadius = 10) => {
+    const cx = Math.max(1, Math.min(w - 2, Math.round(tx)));
+    const cy = Math.max(1, Math.min(h - 2, Math.round(ty)));
+    if (passable(cx, cy)) return { x: cx, y: cy };
+    for (let r = 1; r <= maxRadius; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const x = cx + dx;
+          const y = cy + dy;
+          if (passable(x, y)) return { x, y };
+        }
+      }
+    }
+    return null;
+  };
+  const reachFrom = (start) => {
+    const seen = new Uint8Array(w * h);
+    if (!passable(start.x, start.y)) return seen;
+    const queue = [start];
+    seen[start.y * w + start.x] = 1;
+    for (let i = 0; i < queue.length; i++) {
+      const cur = queue[i];
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          const x = cur.x + dx;
+          const y = cur.y + dy;
+          if (!passable(x, y)) continue;
+          const p = y * w + x;
+          if (seen[p]) continue;
+          seen[p] = 1;
+          queue.push({ x, y });
+        }
+      }
+    }
+    return seen;
+  };
+
+  // 开出生地与中央；把每一条主路拓宽，避免缩放后出现断裂
+  for (const spawn of map.spawns) disc(spawn.cx, spawn.cy, 7);
+  disc(map.center.x, map.center.y, 6);
+  for (const spawn of map.spawns) {
+    corridor({ x: spawn.cx, y: spawn.cy }, map.center, 2.0);
+    corridor(
+      { x: spawn.cx + (spawn.facing.x > 0 ? 3 : -3), y: spawn.cy + (spawn.facing.y > 0 ? 3 : -3) },
+      { x: map.center.x + (spawn.facing.x > 0 ? -4 : 4), y: map.center.y + (spawn.facing.y > 0 ? -4 : 4) },
+      1.7
+    );
+  }
+
+  // 资源点：向中央集中的十字形，共 48 个；越靠近中心越密
+  const cx = map.center.x;
+  const cy = map.center.y;
+  const arms = [
+    { dx: 1, dy: 0 },
+    { dx: -1, dy: 0 },
+    { dx: 0, dy: 1 },
+    { dx: 0, dy: -1 },
+  ];
+  const anchors = [
+    { x: cx - 2, y: cy },
+    { x: cx + 2, y: cy },
+    { x: cx, y: cy - 2 },
+    { x: cx, y: cy + 2 },
+  ];
+  const rings = [
+    { dist: 5, offsets: [-1, 1] },
+    { dist: 11, offsets: [-2, 0, 2] },
+    { dist: 18, offsets: [-2, 0, 2] },
+    { dist: 26, offsets: [-2, 0, 2] },
+  ];
+  for (const ring of rings) {
+    for (const arm of arms) {
+      for (const offset of ring.offsets) {
+        anchors.push({
+          x: cx + (arm.dx !== 0 ? arm.dx * ring.dist : offset),
+          y: cy + (arm.dy !== 0 ? arm.dy * ring.dist : offset),
+        });
+      }
+    }
+  }
+  const used = new Set();
+  let reach = reachFrom(map.center);
+  for (let i = 0; i < anchors.length; i++) {
+    let spot = findSpot(anchors[i].x, anchors[i].y, 12);
+    if (!spot) continue;
+    if (!reach[spot.y * w + spot.x]) {
+      corridor(spot, map.center, 1.5);
+      reach = reachFrom(map.center);
+    }
+    if (used.has(spot.y * w + spot.x)) {
+      const alt = findSpot(spot.x + 2, spot.y + 2, 10);
+      if (!alt || used.has(alt.y * w + alt.x)) continue;
+      spot = alt;
+    }
+    used.add(spot.y * w + spot.x);
+    map.nodes.push({ id: `large-r${i}`, x: spot.x, y: spot.y, gold: 45 });
+  }
+
+  return map;
+}
+
+export function generateMap(seed = Math.floor(Math.random() * 2 ** 31), options = {}) {
+  const base = generateBaseMap(seed);
+  if (options.size === 'large') return scaledMap(base, seed);
+  return base;
 }
 
 /* ------------------------------------------------------------------ */

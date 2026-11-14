@@ -147,7 +147,7 @@ button:disabled {
 }
 
 .brand-text span {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.22em;
   color: var(--muted);
 }
@@ -171,7 +171,7 @@ button:disabled {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.025);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.08em;
 }
 
@@ -237,7 +237,7 @@ button:disabled {
   gap: 8px;
   margin-left: auto;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.08em;
 }
 
@@ -322,7 +322,7 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
   letter-spacing: 0.2em;
   padding: 2px 2px 12px;
@@ -364,7 +364,7 @@ button:disabled {
   padding: 22px 12px;
   text-align: center;
   color: var(--faint);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.7;
 }
 
@@ -426,7 +426,7 @@ button:disabled {
 }
 
 .tag {
-  font-size: 8px;
+  font-size: 10px;
   line-height: 15px;
   padding: 0 4px;
   border-radius: 4px;
@@ -458,12 +458,12 @@ button:disabled {
   gap: 6px;
   margin-top: 5px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .pcard-hero b {
   color: color-mix(in srgb, var(--pc) 78%, #fff);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -507,7 +507,7 @@ button:disabled {
   gap: 4px;
   margin-top: 7px;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
 }
 
@@ -518,7 +518,7 @@ button:disabled {
 
 .pcard-status {
   margin-top: 6px;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--faint);
   letter-spacing: 0.04em;
 }
@@ -536,7 +536,7 @@ button:disabled {
   margin-top: 10px;
   padding-top: 10px;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.6;
   display: flex;
   gap: 6px;
@@ -620,7 +620,7 @@ button:disabled {
   border: 1px solid rgba(255, 207, 107, 0.3);
   background: rgba(10, 20, 30, 0.82);
   backdrop-filter: blur(10px);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
   white-space: nowrap;
@@ -629,7 +629,7 @@ button:disabled {
 .draft-banner b {
   color: var(--gold);
   letter-spacing: 0.12em;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .announce {
@@ -660,7 +660,7 @@ button:disabled {
   border-radius: 999px;
   background: rgba(15, 10, 12, 0.86);
   color: #ffb5b0;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.14em;
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.35);
 }
@@ -685,7 +685,7 @@ button:disabled {
   border: 1px solid var(--line);
   background: rgba(8, 17, 26, 0.9);
   color: var(--text);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.04em;
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.36);
   animation: toast-in 0.25s ease both;
@@ -736,7 +736,7 @@ button:disabled {
   background: rgba(6, 14, 22, 0.94);
   backdrop-filter: blur(12px);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   line-height: 1.6;
   pointer-events: none;
@@ -744,7 +744,7 @@ button:disabled {
 
 .hover-tip b {
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .hover-tip .tip-you {
@@ -757,7 +757,7 @@ button:disabled {
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.94);
   color: #07131c;
-  font-size: 6px;
+  font-size: 10px;
   font-weight: 700;
   vertical-align: 1px;
 }
@@ -783,7 +783,7 @@ button:disabled {
   align-items: center;
   gap: 14px;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.03em;
   pointer-events: none;
 }
@@ -800,7 +800,7 @@ kbd {
   background: rgba(255, 255, 255, 0.04);
   color: var(--muted);
   font-family: inherit;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .resource-legend {
@@ -866,7 +866,7 @@ kbd {
 
 .gold-main span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.14em;
 }
 
@@ -886,7 +886,7 @@ kbd {
   align-items: flex-end;
   gap: 3px;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
   white-space: nowrap;
 }
@@ -930,7 +930,7 @@ kbd {
 
 .unit-kicker {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.18em;
 }
 
@@ -949,7 +949,7 @@ kbd {
   border-radius: 5px;
   padding: 2px 6px;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
-  font-size: 9px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -986,7 +986,7 @@ kbd {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 7px;
+  font-size: 10px;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
   color: rgba(255, 255, 255, 0.82);
   text-shadow: 0 1px 2px #000;
@@ -998,7 +998,7 @@ kbd {
   gap: 4px;
   margin-top: 6px;
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .stat-row b {
@@ -1023,7 +1023,7 @@ kbd {
   border-radius: 4px;
   background: rgba(255, 207, 107, 0.08);
   color: var(--gold);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .tower-items .empty {
@@ -1044,7 +1044,7 @@ kbd {
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.035);
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.05em;
   transition: 0.16s ease;
 }
@@ -1053,7 +1053,7 @@ kbd {
   font-style: normal;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
   color: var(--gold);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .wide-btn:hover:not(:disabled) {
@@ -1105,20 +1105,20 @@ kbd {
   background: rgba(255, 207, 107, 0.11);
   color: var(--gold);
   font-style: normal;
-  font-size: 9px;
+  font-size: 11px;
   margin-bottom: 2px;
 }
 
 .equip-card b {
   color: var(--text);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .equip-card .equip-owned {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
 }
 
@@ -1126,7 +1126,7 @@ kbd {
   color: var(--gold);
   font-style: normal;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .equip-card:hover:not(:disabled) {
@@ -1204,12 +1204,12 @@ kbd {
 }
 
 .skill-text b {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .skill-text small {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   max-width: 190px;
   white-space: nowrap;
   overflow: hidden;
@@ -1222,7 +1222,7 @@ kbd {
   color: var(--gold);
   font-style: normal;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
-  font-size: 11px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
@@ -1231,7 +1231,7 @@ kbd {
   justify-content: space-between;
   gap: 6px;
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.6;
   padding: 0 1px;
 }
@@ -1338,26 +1338,26 @@ kbd {
 
 .hc-top span {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .hc-price {
   margin-left: auto;
   color: var(--gold);
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .hc-stats {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
   letter-spacing: 0.01em;
 }
 
 .hc-skill {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1373,7 +1373,7 @@ kbd {
   border: 1px dashed var(--line);
   border-radius: 8px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.7;
 }
 
@@ -1391,7 +1391,7 @@ kbd {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   text-decoration: underline;
   text-underline-offset: 3px;
   padding: 2px 6px;
@@ -1428,7 +1428,7 @@ kbd {
 #lobby-ui > p {
   text-align: center;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.7;
   margin: 0 0 8px;
 }
@@ -1452,12 +1452,12 @@ kbd {
 
 .lobby-side-stats span {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .lobby-side-stats b {
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
 }
 
@@ -1546,7 +1546,7 @@ kbd {
   align-items: center;
   gap: 8px;
   color: var(--cyan);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.28em;
   text-transform: uppercase;
 }
@@ -1611,7 +1611,7 @@ kbd {
   display: block;
   margin-bottom: 6px;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.16em;
 }
 
@@ -1659,7 +1659,7 @@ button {
   gap: 7px;
   padding: 0 16px;
   border-radius: 7px;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   transition: 0.18s ease;
   overflow: hidden;
@@ -1707,7 +1707,7 @@ button {
 
 .start-main-btn small {
   color: rgba(217, 255, 250, 0.6);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.08em;
 }
 
@@ -1737,7 +1737,7 @@ button {
   border-radius: 7px;
   background: var(--cyan-soft);
   color: var(--cyan);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .start-error {
@@ -1747,7 +1747,7 @@ button {
   border-radius: 6px;
   background: rgba(255, 107, 97, 0.07);
   color: #ffb5b0;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -1769,14 +1769,14 @@ button {
 
 .feature-strip b {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.08em;
 }
 
 .feature-strip span {
   color: var(--faint);
   font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "TowerCJK", system-ui, sans-serif;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.6;
 }
 
@@ -1785,7 +1785,7 @@ button {
   left: clamp(28px, 7vw, 110px);
   bottom: 18px;
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.16em;
 }
 
@@ -1829,7 +1829,7 @@ button {
 
 .room-code-line span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.12em;
 }
 
@@ -1866,7 +1866,7 @@ button {
   border-style: dashed;
   color: var(--faint);
   justify-content: center;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .lobby-slot .slot-color {
@@ -1894,13 +1894,13 @@ button {
 
 .lobby-slot .slot-body span {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .lobby-slot .slot-tag {
   margin-left: auto;
   color: var(--gold);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .lobby-setting {
@@ -1914,7 +1914,7 @@ button {
 
 .lobby-setting > span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .slot-choice {
@@ -1929,7 +1929,7 @@ button {
   border-radius: 5px;
   background: transparent;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .slot-choice button.active {
@@ -1956,13 +1956,13 @@ button {
 }
 
 .lobby-actions .primary small {
-  font-size: 8px;
+  font-size: 10px;
   color: rgba(217, 255, 250, 0.58);
 }
 
 .lobby-note {
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   text-align: center;
   margin: 12px 0 0;
   line-height: 1.6;
@@ -2008,7 +2008,7 @@ button {
 
 .end-winner span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .end-ranking {
@@ -2027,7 +2027,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.018);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .rank-row .rk {
@@ -2043,7 +2043,7 @@ button {
   color: var(--muted);
   text-align: right;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .rank-row.winner {
@@ -2063,7 +2063,7 @@ button {
 
 .end-note {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   text-align: center;
   margin: 12px 0 0;
 }
@@ -2089,7 +2089,7 @@ button {
 
 .loading-box p {
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   margin: 0;
 }
 
@@ -2156,7 +2156,7 @@ button {
 .help-grid h4 {
   margin: 0 0 5px;
   color: var(--cyan);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
 }
@@ -2164,7 +2164,7 @@ button {
 .help-grid p {
   margin: 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.75;
 }
 
@@ -2173,7 +2173,7 @@ button {
   padding-top: 12px;
   border-top: 1px solid var(--line);
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.7;
 }
 
@@ -2263,7 +2263,7 @@ button {
     font-size: 58px;
   }
   .tagline {
-    font-size: 11px;
+    font-size: 12px;
     margin-bottom: 16px;
   }
   .start-content {
@@ -2286,7 +2286,7 @@ button {
   align-items: center;
   gap: 5px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.16em;
 }
 
@@ -2313,7 +2313,7 @@ button {
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.94);
   color: #07131c;
-  font-size: 6px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -2327,7 +2327,7 @@ button {
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.025);
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.04em;
   transition: 0.16s ease;
 }
@@ -2397,7 +2397,7 @@ button {
   border: 1px dashed var(--line);
   border-radius: 7px;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
   text-align: center;
   padding: 6px;
@@ -2441,14 +2441,14 @@ button {
   border-radius: 5px;
   background: color-mix(in srgb, var(--rc) 14%, transparent);
   color: var(--rc);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 }
 
 .roster-card .r-name {
   max-width: 100%;
   color: var(--text);
-  font-size: 8px;
+  font-size: 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2475,7 +2475,7 @@ button {
   top: 2px;
   color: var(--faint);
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
-  font-size: 6px;
+  font-size: 10px;
 }
 
 .altar-btn {
@@ -2505,7 +2505,7 @@ button {
 .deploy-copy {
   margin: 2px 2px 10px;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.7;
   text-align: center;
 }
@@ -2528,7 +2528,7 @@ button {
 .eliminated-copy {
   margin: 4px 0 18px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.9;
 }
 
@@ -2552,7 +2552,7 @@ button {
 .altar-sub {
   margin: -4px 0 14px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.7;
 }
 
@@ -2624,25 +2624,25 @@ button {
 
 .altar-card .a-top span {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .altar-card .a-price {
   margin-left: auto;
   color: var(--gold);
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .altar-card .a-stats {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
   font-family: Consolas, "Noto Sans SC", "Microsoft YaHei", "TowerCJK", monospace;
 }
 
 .altar-card .a-skill {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.5;
 }
 
@@ -2653,7 +2653,7 @@ button {
 
 .altar-card .a-why {
   color: #ff9b92;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .altar-status {
@@ -2662,7 +2662,7 @@ button {
   border: 1px dashed var(--line);
   border-radius: 7px;
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.7;
 }
 
@@ -2725,12 +2725,12 @@ button {
 }
 
 .focus-button .focus-text b {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .focus-button .focus-text small {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .focus-button kbd {
@@ -2801,7 +2801,7 @@ button {
 .pause-card p {
   margin: 0 0 8px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .pause-card .primary {
@@ -2810,7 +2810,7 @@ button {
 
 .pause-card small {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 /* ---------------- tutorial ---------------- */
@@ -2823,7 +2823,7 @@ button {
 
 .tutorial-entry small {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.04em;
 }
 
@@ -2860,7 +2860,7 @@ button {
   align-items: center;
   justify-content: space-between;
   color: var(--gold);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.18em;
 }
 
@@ -2880,7 +2880,7 @@ button {
 .tutorial-panel p {
   margin: 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.75;
 }
 
@@ -3044,7 +3044,7 @@ button {
     border-radius: 50%;
     background: rgba(20, 57, 65, 0.92);
     color: #d8fffb;
-    font-size: 11px;
+    font-size: 12px;
     box-shadow: 0 0 18px rgba(102, 224, 210, 0.28);
     transition: transform 0.08s linear;
     will-change: transform;
@@ -3081,7 +3081,7 @@ button {
   .m-btn.small {
     width: 34px;
     height: 34px;
-    font-size: 11px;
+    font-size: 12px;
     border-color: rgba(255, 255, 255, 0.16);
     color: var(--muted);
   }
@@ -3115,7 +3115,7 @@ button {
     right: 2px;
     top: 1px;
     min-width: 14px;
-    font-size: 8px;
+    font-size: 10px;
     color: var(--gold);
   }
 
@@ -3134,7 +3134,7 @@ button {
 }
 .ai-level-picker > span {
   color: var(--faint);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   white-space: nowrap;
 }
@@ -3154,7 +3154,7 @@ button {
   border-radius: 5px;
   background: transparent;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.04em;
 }
 .ai-level-options button.active {
@@ -3206,7 +3206,7 @@ button {
 }
 .spectator-entry small {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.04em;
 }
 .spectator-banner {
@@ -3222,7 +3222,7 @@ button {
   border-radius: 8px;
   background: rgba(5, 17, 23, 0.88);
   color: var(--cyan);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.06em;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
@@ -3275,8 +3275,8 @@ button {
   font-size: 14px;
 }
 .kite-button .kite-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.kite-button .kite-text b { font-size: 10px; }
-.kite-button .kite-text small { color: var(--muted); font-size: 8px; }
+.kite-button .kite-text b { font-size: 11px; }
+.kite-button .kite-text small { color: var(--muted); font-size: 10px; }
 .kite-button kbd { margin-left: auto; }
 
 .m-btn.kite-on {
@@ -3300,7 +3300,7 @@ button {
 }
 .replay-entry small {
   color: var(--faint);
-  font-size: 8px;
+  font-size: 10px;
   letter-spacing: 0.04em;
 }
 .replay-bar {
@@ -3328,7 +3328,7 @@ button {
 .replay-time {
   min-width: 76px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
   text-align: center;
   white-space: nowrap;
 }
@@ -3345,7 +3345,7 @@ button {
 }
 .replay-list-note {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   margin: 0 0 12px;
 }
 .replay-list {
@@ -3373,12 +3373,12 @@ button {
   background: rgba(102, 224, 210, 0.08);
 }
 .replay-list-item .rl-main { flex: 1; min-width: 0; }
-.replay-list-item .rl-main b { display: block; font-size: 11px; }
-.replay-list-item .rl-main small { color: var(--muted); font-size: 9px; }
-.replay-list-item .rl-meta { color: var(--faint); font-size: 9px; text-align: right; white-space: nowrap; }
+.replay-list-item .rl-main b { display: block; font-size: 12px; }
+.replay-list-item .rl-main small { color: var(--muted); font-size: 11px; }
+.replay-list-item .rl-meta { color: var(--faint); font-size: 11px; text-align: right; white-space: nowrap; }
 @media (max-width: 760px), (max-height: 560px) and (pointer: coarse) {
   .replay-bar { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); gap: 5px; padding: 5px 6px; }
-  .replay-time { min-width: 62px; font-size: 8px; }
+  .replay-time { min-width: 62px; font-size: 10px; }
   .replay-bar .mini-btn { padding: 0 7px; }
 }
 
@@ -3386,4 +3386,128 @@ button {
   border-color: rgba(255, 107, 97, 0.5);
   color: var(--red);
   background: rgba(255, 107, 97, 0.1);
+}
+
+.tag.team {
+  color: #b8e9e5;
+  border: 1px solid rgba(102, 224, 210, 0.28);
+  background: rgba(102, 224, 210, 0.1);
+}
+#start-map-size button,
+#start-team-mode button,
+#lobby-map-size button,
+#lobby-team-mode button {
+  white-space: nowrap;
+}
+
+.start-screen, .lobby-screen {
+  overflow-y: auto;
+}
+#start-map-size button,
+#start-team-mode button {
+  font-size: 10px;
+}
+
+.auto-select-button {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border: 1px solid rgba(199, 146, 234, 0.24);
+  border-radius: 9px;
+  background: rgba(199, 146, 234, 0.04);
+  color: var(--text);
+  text-align: left;
+  transition: 0.16s ease;
+}
+.auto-select-button:hover:not(:disabled),
+.auto-select-button.active {
+  border-color: rgba(199, 146, 234, 0.7);
+  background: rgba(199, 146, 234, 0.12);
+  box-shadow: 0 0 18px rgba(199, 146, 234, 0.12);
+}
+.auto-select-button:disabled { opacity: 0.35; }
+.auto-select-button .auto-mark {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(199, 146, 234, 0.35);
+  border-radius: 50%;
+  color: #d8b4fe;
+  font-size: 14px;
+}
+.auto-select-button .auto-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.auto-select-button .auto-text b { font-size: 11px; }
+.auto-select-button .auto-text small { color: var(--muted); font-size: 10px; }
+.auto-select-button kbd { margin-left: auto; }
+
+.map-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 46px;
+  z-index: 6;
+  display: flex;
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid rgba(129, 214, 218, 0.16);
+  border-radius: 9px;
+  background: rgba(5, 13, 21, 0.72);
+  backdrop-filter: blur(8px);
+}
+.map-ctl {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(129, 214, 218, 0.16);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+}
+.map-ctl:hover {
+  border-color: rgba(129, 214, 218, 0.5);
+  background: rgba(129, 214, 218, 0.1);
+}
+.map-ctl.map-center { font-size: 12px; color: var(--gold); }
+
+/* 可读性：关键战斗信息再放大一档 */
+.pcard-name { font-size: 15px; }
+.tag { font-size: 12px; line-height: 17px; }
+.pcard-hero, .pcard-hero b { font-size: 13px; }
+.pcard-meta, .pcard-status { font-size: 13px; }
+.unit-kicker { font-size: 12px; }
+.unit-head b { font-size: 15px; }
+.level-badge { font-size: 13px; }
+.meter span { font-size: 12px; }
+.stat-row { font-size: 13px; }
+.command-hint { font-size: 13px; line-height: 1.5; }
+
+/* 底部提示改成可换行区域，避免大字号后互相覆盖 */
+.stage-bottom-hint {
+  right: 156px;
+  bottom: 10px;
+  flex-wrap: wrap;
+  row-gap: 4px;
+  column-gap: 12px;
+  line-height: 1.4;
+  font-size: 12px;
+}
+.map-controls { bottom: 112px; }
+
+@media (max-width: 720px) {
+  .stage-bottom-hint { display: none; }
+  .map-controls { bottom: 64px; right: 10px; }
+}
+
+#game.pan-mode, .stage.pan-mode #game { cursor: grab; }
+.stage.pan-mode #game:active { cursor: grabbing; }
+.map-ctl.map-hand.active {
+  border-color: rgba(255, 207, 107, 0.6);
+  background: rgba(255, 207, 107, 0.14);
+  color: var(--gold);
 }
