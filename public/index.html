@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#071019" />
     <title>塔魂：四境争锋</title>
-    <link rel="stylesheet" href="/styles.css?v=2.13.1" />
+    <link rel="stylesheet" href="/styles.css?v=2.14.0" />
   </head>
   <body>
     <div class="app" id="app">
@@ -52,6 +52,7 @@
 
         <section class="stage" id="stage">
           <canvas id="game"></canvas>
+          <canvas id="minimap" width="360" height="260" aria-label="战场小地图"></canvas>
           <div class="stage-glow"></div>
           <div class="map-controls" id="map-controls">
             <button class="map-ctl" id="map-zoom-out" title="缩小地图">−</button>
@@ -317,13 +318,22 @@
               <div class="ai-level-options" id="start-map-size">
                 <button type="button" data-map-size="standard" class="active">标准</button>
                 <button type="button" data-map-size="large">大地图</button>
+                <button type="button" data-map-size="xlarge">超大图</button>
               </div>
             </div>
             <div class="ai-level-picker">
               <span>模式</span>
               <div class="ai-level-options" id="start-team-mode">
                 <button type="button" data-team-mode="ffa" class="active">自由混战</button>
-                <button type="button" data-team-mode="teams">团队 2v2</button>
+                <button type="button" data-team-mode="teams">团队</button>
+              </div>
+            </div>
+            <div class="ai-level-picker">
+              <span>人数</span>
+              <div class="ai-level-options" id="start-players">
+                <button type="button" data-players="4" class="active">4 人</button>
+                <button type="button" data-players="6">6 人</button>
+                <button type="button" data-players="8">8 人</button>
               </div>
             </div>
             <div class="start-buttons">
@@ -379,8 +389,9 @@
             <span>房间人数</span>
             <div class="slot-choice" id="slot-choice">
               <button data-slots="2">2 人</button>
-              <button data-slots="3">3 人</button>
               <button data-slots="4">4 人</button>
+              <button data-slots="6">6 人</button>
+              <button data-slots="8">8 人</button>
             </div>
           </div>
           <div class="lobby-setting">
@@ -397,13 +408,14 @@
             <div class="slot-choice" id="lobby-map-size">
               <button data-map-size="standard">标准</button>
               <button data-map-size="large">大地图</button>
+              <button data-map-size="xlarge">超大图</button>
             </div>
           </div>
           <div class="lobby-setting">
             <span>模式</span>
             <div class="slot-choice" id="lobby-team-mode">
               <button data-team-mode="ffa">自由混战</button>
-              <button data-team-mode="teams">团队 2v2</button>
+              <button data-team-mode="teams">团队</button>
             </div>
           </div>
           <div class="lobby-actions">
@@ -523,6 +535,6 @@
       </div>
     </div>
 
-    <script type="module" src="/client.js?v=2.13.1"></script>
+    <script type="module" src="/client.js?v=2.14.0"></script>
   </body>
 </html>

@@ -48,6 +48,42 @@ export const SPAWNS = [
     default: { x: 7, y: 22 },
     facing: { x: 1, y: -1 },
   },
+  {
+    index: 4,
+    name: '北境 · 寒风',
+    cx: 20,
+    cy: 5,
+    zone: { x0: 14, y0: 2, x1: 26, y1: 10 },
+    default: { x: 20, y: 5 },
+    facing: { x: 0, y: 1 },
+  },
+  {
+    index: 5,
+    name: '南境 · 烈阳',
+    cx: 20,
+    cy: 24,
+    zone: { x0: 14, y0: 20, x1: 26, y1: 28 },
+    default: { x: 20, y: 24 },
+    facing: { x: 0, y: -1 },
+  },
+  {
+    index: 6,
+    name: '西境 · 沉沙',
+    cx: 5,
+    cy: 15,
+    zone: { x0: 2, y0: 10, x1: 11, y1: 20 },
+    default: { x: 5, y: 15 },
+    facing: { x: 1, y: 0 },
+  },
+  {
+    index: 7,
+    name: '东境 · 潮生',
+    cx: 34,
+    cy: 15,
+    zone: { x0: 29, y0: 10, x1: 38, y1: 20 },
+    default: { x: 34, y: 15 },
+    facing: { x: -1, y: 0 },
+  },
 ];
 
 const CENTER = { x: 20, y: 15 };
@@ -385,15 +421,18 @@ function generateBaseMap(seed = Math.floor(Math.random() * 2 ** 31)) {
 
 const LARGE_W = 96;
 const LARGE_H = 72;
+const XLARGE_W = 128;
+const XLARGE_H = 96;
 
-function scaledMap(base, seed) {
-  const w = LARGE_W;
-  const h = LARGE_H;
+function scaledMap(base, seed, size = 'large') {
+  const xl = size === 'xlarge';
+  const w = xl ? XLARGE_W : LARGE_W;
+  const h = xl ? XLARGE_H : LARGE_H;
   // 大地图暂时使用全平地：不使用山地/水域/森林/丘陵。
   const tiles = new Array(w * h).fill(TERRAIN.PLAIN);
   const map = {
     version: 2,
-    size: 'large',
+    size: xl ? 'xlarge' : 'large',
     flat: true,
     seed,
     w,
@@ -500,7 +539,7 @@ function scaledMap(base, seed) {
     );
   }
 
-  // 资源点：向中央集中的十字形，共 48 个；越靠近中心越密
+  // 资源点：向中央集中的十字形；大地图 48 个、超大图 64 个
   const cx = map.center.x;
   const cy = map.center.y;
   const arms = [
@@ -509,18 +548,37 @@ function scaledMap(base, seed) {
     { dx: 0, dy: 1 },
     { dx: 0, dy: -1 },
   ];
-  const anchors = [
-    { x: cx - 2, y: cy },
-    { x: cx + 2, y: cy },
-    { x: cx, y: cy - 2 },
-    { x: cx, y: cy + 2 },
-  ];
-  const rings = [
-    { dist: 5, offsets: [-1, 1] },
-    { dist: 11, offsets: [-2, 0, 2] },
-    { dist: 18, offsets: [-2, 0, 2] },
-    { dist: 26, offsets: [-2, 0, 2] },
-  ];
+  const anchors = xl
+    ? [
+        { x: cx - 2, y: cy },
+        { x: cx + 2, y: cy },
+        { x: cx - 4, y: cy },
+        { x: cx + 4, y: cy },
+        { x: cx, y: cy - 2 },
+        { x: cx, y: cy + 2 },
+        { x: cx, y: cy - 4 },
+        { x: cx, y: cy + 4 },
+      ]
+    : [
+        { x: cx - 2, y: cy },
+        { x: cx + 2, y: cy },
+        { x: cx, y: cy - 2 },
+        { x: cx, y: cy + 2 },
+      ];
+  const rings = xl
+    ? [
+        { dist: 6, offsets: [-1, 1] },
+        { dist: 14, offsets: [-2, 0, 2] },
+        { dist: 22, offsets: [-2, 0, 2] },
+        { dist: 30, offsets: [-2, 0, 2] },
+        { dist: 38, offsets: [-2, 0, 2] },
+      ]
+    : [
+        { dist: 5, offsets: [-1, 1] },
+        { dist: 11, offsets: [-2, 0, 2] },
+        { dist: 18, offsets: [-2, 0, 2] },
+        { dist: 26, offsets: [-2, 0, 2] },
+      ];
   for (const ring of rings) {
     for (const arm of arms) {
       for (const offset of ring.offsets) {
@@ -546,7 +604,7 @@ function scaledMap(base, seed) {
       spot = alt;
     }
     used.add(spot.y * w + spot.x);
-    map.nodes.push({ id: `large-r${i}`, x: spot.x, y: spot.y, gold: 45 });
+    map.nodes.push({ id: `${size}-r${i}`, x: spot.x, y: spot.y, gold: 45 });
   }
 
   return map;
@@ -554,7 +612,9 @@ function scaledMap(base, seed) {
 
 export function generateMap(seed = Math.floor(Math.random() * 2 ** 31), options = {}) {
   const base = generateBaseMap(seed);
-  if (options.size === 'large') return scaledMap(base, seed);
+  if (options.size === 'large' || options.size === 'xlarge') {
+    return scaledMap(base, seed, options.size);
+  }
   return base;
 }
 

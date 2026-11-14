@@ -260,7 +260,7 @@ function hydrateRoom(saved) {
     ])
   );
   if (!AI_LEVELS[room.aiLevel]) room.aiLevel = 'normal';
-  if (room.mapSize !== 'large') room.mapSize = 'standard';
+  if (!['standard', 'large', 'xlarge'].includes(room.mapSize)) room.mapSize = 'standard';
   if (room.teamMode !== 'teams') room.teamMode = 'ffa';
   room.players.forEach((p) => {
     p.team = room.teamMode === 'teams' ? p.slot % 2 : null;
@@ -346,7 +346,7 @@ async function loadRooms() {
 
 function createRoom(maxPlayers = 4, aiLevel = 'normal', options = {}) {
   const code = newRoomCode();
-  const mapSize = options.mapSize === 'large' ? 'large' : 'standard';
+  const mapSize = options.mapSize === 'xlarge' ? 'xlarge' : options.mapSize === 'large' ? 'large' : 'standard';
   const teamMode = options.teamMode === 'teams' ? 'teams' : 'ffa';
   const room = {
     code,
@@ -357,7 +357,7 @@ function createRoom(maxPlayers = 4, aiLevel = 'normal', options = {}) {
     aiLevel: AI_LEVELS[aiLevel] ? aiLevel : 'normal',
     mapSize,
     teamMode,
-    maxPlayers: Math.max(2, Math.min(4, Number(maxPlayers) || 4)),
+    maxPlayers: [2, 4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4,
     players: [],
     spectators: new Map(),
     map: generateMap(undefined, { size: mapSize }),
@@ -1001,7 +1001,7 @@ function handleAction(room, player, action) {
       if (room.phase !== 'lobby') return { ok: false, error: '当前不能修改人数' };
       if (room.hostId !== player.id) return { ok: false, error: '只有房主可以修改人数' };
       const value = Number(action.value);
-      if (!(value >= 2 && value <= 4)) return { ok: false, error: '人数必须是 2-4' };
+      if (![2, 4, 6, 8].includes(value)) return { ok: false, error: '人数必须是 2/4/6/8' };
       if (value < humanCount(room)) return { ok: false, error: '房间内已有更多玩家' };
       if (room.players.some((p) => p.slot >= value)) {
         return { ok: false, error: '现有席位超出该人数' };
@@ -1022,7 +1022,7 @@ function handleAction(room, player, action) {
     case 'setMapSize': {
       if (room.phase !== 'lobby') return { ok: false, error: '开局后不能修改地图' };
       if (room.hostId !== player.id) return { ok: false, error: '只有房主可以修改地图' };
-      const size = action.value === 'large' ? 'large' : 'standard';
+      const size = action.value === 'xlarge' ? 'xlarge' : action.value === 'large' ? 'large' : 'standard';
       room.mapSize = size;
       room.map = generateMap(undefined, { size });
       for (const p of room.players) {
@@ -1240,7 +1240,7 @@ async function handleApi(req, res, pathname, query) {
   }
 
   if (pathname === '/api/create') {
-    const room = createRoom(4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
+    const room = createRoom(Number(body.maxPlayers) || 4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
     const added = addHuman(room, body.name);
     if (added.error) {
       json(res, 400, { error: added.error });
@@ -1251,7 +1251,7 @@ async function handleApi(req, res, pathname, query) {
   }
 
   if (pathname === '/api/quick') {
-    const room = createRoom(4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
+    const room = createRoom(Number(body.maxPlayers) || 4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
     const added = addHuman(room, body.name);
     if (added.error) {
       json(res, 400, { error: added.error });
@@ -1277,7 +1277,7 @@ async function handleApi(req, res, pathname, query) {
   }
 
   if (pathname === '/api/spectate') {
-    const room = createRoom(4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
+    const room = createRoom(Number(body.maxPlayers) || 4, body.aiLevel, { mapSize: body.mapSize, teamMode: body.teamMode });
     fillAI(room);
     const spectator = addSpectator(room, body.name);
     startDraft(room);

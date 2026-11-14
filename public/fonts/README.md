@@ -6,6 +6,6 @@
 - 原始字体：`FandolHei-Regular.otf`、`FandolHei-Bold.otf`
 - 授权：**GPL + GPL font exception**
 - 来源：TeX Live 2026 / CTAN `fonts/fandol`
-- 转换：`pyftsubset --flavor=woff2 --unicodes='*' --layout-features='*' --desubroutinize`
+- 转换：用 `pyftsubset --flavor=woff2 --text-file=<项目字符集> --layout-features='*' --desubroutinize` 生成项目字符子集（含游戏内全部英雄/UI 汉字）
 
 如果二次分发本项目，请保留本说明并遵守 Fandol 的授权条款。

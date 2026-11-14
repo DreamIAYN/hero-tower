@@ -24,6 +24,7 @@ const PHASE_LABEL = {
   ended: ['战斗结束', 'danger'],
 };
 
+const TEAM_COLORS = ['#5bd7ff', '#ff6b61'];
 const CJK_FONT = '"Noto Sans SC", "Microsoft YaHei", "PingFang SC", "TowerCJK", sans-serif';
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -59,6 +60,7 @@ const els = {
   mapZoomOut: $('#map-zoom-out'),
   mapZoomIn: $('#map-zoom-in'),
   mapCenter: $('#map-center'),
+  minimap: $('#minimap'),
   mapHand: $('#map-hand'),
   commandPanel: $('.command-panel'),
   mobilePanelToggle: $('#mobile-panel-toggle'),
@@ -194,6 +196,7 @@ const els = {
   startAiLevel: $('#start-ai-level'),
   startMapSize: $('#start-map-size'),
   startTeamMode: $('#start-team-mode'),
+  startPlayers: $('#start-players'),
   startError: $('#start-error'),
 
   lobbyCode: $('#lobby-code'),
@@ -256,6 +259,7 @@ const app = {
   view: { w: 1, h: 1, dpr: 1, scale: 1, ox: 0, oy: 0, zoom: 1, camX: null, camY: null, battleCentered: false },
   canvasPointer: null,
   panMode: false,
+  minimapDrag: false,
   mouse: { x: 0, y: 0, worldX: 0, worldY: 0, over: false, tile: null },
   visuals: new Map(),
   effects: [],
@@ -287,6 +291,7 @@ const app = {
   aiLevel: 'normal',
   mapSize: 'standard',
   teamMode: 'ffa',
+  maxPlayers: 4,
   spectator: false,
   replayMode: false,
   replay: null,
@@ -298,6 +303,7 @@ const nameKey = 'tower-souls-name-v1';
 const aiLevelKey = 'tower-souls-ai-level-v1';
 const mapSizeKey = 'tower-souls-map-size-v1';
 const teamModeKey = 'tower-souls-team-mode-v1';
+const playersKey = 'tower-souls-players-v1';
 let recoveryProbeTimer = null;
 let recoveryProbeAttempts = 0;
 
@@ -314,6 +320,7 @@ function init() {
   app.aiLevel = readAILevelPreference();
   app.mapSize = readMapSizePreference();
   app.teamMode = readTeamModePreference();
+  app.maxPlayers = readPlayersPreference();
   bindEvents();
   updateAILevelButtons();
   app.mobile = isMobileTouch();
@@ -592,7 +599,7 @@ function applyMap(map) {
     app.effects = [];
   }
   app.map = map;
-  app.view.zoom = map.w > 50 ? 2 : 1;
+  app.view.zoom = map.w >= 120 ? 2.2 : map.w > 50 ? 2 : 1;
   app.view.camX = (map.center.x + 0.5) * map.tile;
   app.view.camY = (map.center.y + 0.5) * map.tile;
   app.view.battleCentered = false;
@@ -961,7 +968,7 @@ function bindEvents() {
   els.startMapSize.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-map-size]');
     if (!btn) return;
-    app.mapSize = btn.dataset.mapSize === 'large' ? 'large' : 'standard';
+    app.mapSize = btn.dataset.mapSize === 'xlarge' ? 'xlarge' : btn.dataset.mapSize === 'large' ? 'large' : 'standard';
     try { localStorage.setItem(mapSizeKey, app.mapSize); } catch { /* noop */ }
     updateModeButtons();
   });
@@ -970,6 +977,13 @@ function bindEvents() {
     if (!btn) return;
     app.teamMode = btn.dataset.teamMode === 'teams' ? 'teams' : 'ffa';
     try { localStorage.setItem(teamModeKey, app.teamMode); } catch { /* noop */ }
+    updateModeButtons();
+  });
+  els.startPlayers.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-players]');
+    if (!btn) return;
+    app.maxPlayers = Number(btn.dataset.players) || 4;
+    try { localStorage.setItem(playersKey, String(app.maxPlayers)); } catch { /* noop */ }
     updateModeButtons();
   });
   els.lobbyMapSize.addEventListener('click', (e) => {
@@ -1081,6 +1095,19 @@ function bindEvents() {
   els.mapZoomIn.addEventListener('click', () => zoomViewAt(app.view.zoom * 1.25, app.view.w / 2, app.view.h / 2));
   els.mapCenter.addEventListener('click', centerCameraOnPlayer);
   els.mapHand.addEventListener('click', togglePanMode);
+  els.minimap.addEventListener('pointerdown', onMinimapPointer);
+  els.minimap.addEventListener('pointermove', (e) => {
+    if (app.minimapDrag) onMinimapPointer(e);
+  });
+  els.minimap.addEventListener('pointerup', () => { app.minimapDrag = false; });
+  els.minimap.addEventListener('pointercancel', () => { app.minimapDrag = false; });
+  window.addEventListener('pointerup', () => { app.minimapDrag = false; });
+  window.addEventListener('pointercancel', () => { app.minimapDrag = false; });
+  els.playerList.addEventListener('click', (e) => {
+    const card = e.target.closest('.pcard[data-player-id]');
+    if (!card) return;
+    centerCameraOnPlayer(card.dataset.playerId);
+  });
   els.canvas.addEventListener('wheel', (e) => {
     if (!currentMap()) return;
     e.preventDefault();
@@ -1160,17 +1187,25 @@ function updateModeButtons() {
   for (const btn of $$('#start-team-mode button')) {
     btn.classList.toggle('active', btn.dataset.teamMode === app.teamMode);
   }
+  for (const btn of $$('#start-players button')) {
+    btn.classList.toggle('active', Number(btn.dataset.players) === app.maxPlayers);
+  }
   const names = { easy: '休闲', normal: '标准', hard: '困难', nightmare: '噩梦' };
-  const maps = { standard: '标准图', large: '大地图' };
-  const modes = { ffa: '自由混战', teams: '团队 2v2' };
+  const maps = { standard: '标准图', large: '大地图', xlarge: '超大图' };
+  const modes = { ffa: '自由混战', teams: teamModeLabel() };
   const small = els.quickBtn?.querySelector('small');
-  if (small) small.textContent = `你 + 3 名 AI · ${names[app.aiLevel] || '标准'} · ${maps[app.mapSize] || '标准图'} · ${modes[app.teamMode] || '自由混战'}`;
+  if (small) small.textContent = `你 + ${Math.max(1, app.maxPlayers - 1)} 名 AI · ${names[app.aiLevel] || '标准'} · ${maps[app.mapSize] || '标准图'} · ${modes[app.teamMode] || '自由混战'}`;
+}
+
+function teamModeLabel(max = app.maxPlayers) {
+  if (app.teamMode !== 'teams') return '自由混战';
+  return `团队 ${Math.max(1, Math.floor(max / 2))}v${Math.max(1, Math.floor(max / 2))}`;
 }
 
 function readMapSizePreference() {
   try {
     const v = localStorage.getItem(mapSizeKey);
-    if (v === 'large' || v === 'standard') return v;
+    if (v === 'large' || v === 'xlarge' || v === 'standard') return v;
   } catch { /* noop */ }
   return 'standard';
 }
@@ -1183,11 +1218,19 @@ function readTeamModePreference() {
   return 'ffa';
 }
 
+function readPlayersPreference() {
+  try {
+    const v = Number(localStorage.getItem(playersKey));
+    if ([4, 6, 8].includes(v)) return v;
+  } catch { /* noop */ }
+  return 4;
+}
+
 async function quickPlay() {
   clearStartError();
   startBusy(els.quickBtn, '正在集结 AI…');
   try {
-    const data = await api('/api/quick', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode });
+    const data = await api('/api/quick', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode, maxPlayers: app.maxPlayers });
     if (!data.ok) {
       showStartError(data.error || '创建失败');
       return;
@@ -1222,7 +1265,7 @@ async function startSpectate() {
   clearStartError();
   startBusy(els.spectateAiBtn, '正在创建观战局…');
   try {
-    const data = await api('/api/spectate', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode });
+    const data = await api('/api/spectate', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode, maxPlayers: app.maxPlayers });
     if (!data.ok) {
       showStartError(data.error || '观战房间创建失败');
       return;
@@ -1241,7 +1284,7 @@ async function createRoom() {
   clearStartError();
   startBusy(els.createBtn, '创建中…');
   try {
-    const data = await api('/api/create', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode });
+    const data = await api('/api/create', { name: readName(), aiLevel: app.aiLevel, mapSize: app.mapSize, teamMode: app.teamMode, maxPlayers: app.maxPlayers });
     if (!data.ok) {
       showStartError(data.error || '创建失败');
       return;
@@ -1627,7 +1670,11 @@ function colorOf(owner) {
 function updatePlayerList() {
   const state = app.state;
   if (!state) return;
-  const players = [...state.players].sort((a, b) => a.slot - b.slot);
+  const teamMode = state.teamMode === 'teams';
+  const players = [...state.players].sort((a, b) => {
+    if (teamMode && a.team !== b.team) return (a.team ?? 0) - (b.team ?? 0);
+    return a.slot - b.slot;
+  });
   const total = state.phase === 'lobby' ? state.maxPlayers : Math.max(players.length, state.maxPlayers || 4);
   els.playerCount.textContent = `${players.length} / ${total}`;
 
@@ -1637,7 +1684,9 @@ function updatePlayerList() {
   }
 
   const battle = state.battle;
-  const cards = players.map((p) => {
+  const cards = [];
+  let lastTeam = null;
+  for (const p of players) {
     const allHeroes = battle ? battle.heroes.filter((x) => x.owner === p.id) : [];
     const allTowers = battle ? battle.towers.filter((x) => x.owner === p.id) : [];
     const hero =
@@ -1680,8 +1729,13 @@ function updatePlayerList() {
     const headerHero = battle
       ? `${def?.name || '尚未召唤'}${hero ? ` · 塔 ${p.towersAlive || 0}/${p.towersTotal || 0}` : ''}`
       : '第一座魂塔';
-    return `
-      <div class="pcard ${isMe ? 'me' : ''} ${p.eliminated ? 'eliminated' : battle && (p.heroesTotal || 0) > 0 && !heroAlive ? 'dead' : ''}" style="--pc:${esc(p.color)}">
+    if (teamMode && p.team !== lastTeam) {
+      lastTeam = p.team;
+      const count = players.filter((x) => x.team === p.team).length;
+      cards.push(`<div class="team-group-header team${p.team}" style="--tc:${TEAM_COLORS[p.team] || '#8ea6b3'}"><b>队伍 ${p.team + 1}</b><span>${count} 人 · 点击队友定位</span></div>`);
+    }
+    cards.push(`
+      <div class="pcard ${isMe ? 'me' : ''} ${p.eliminated ? 'eliminated' : battle && (p.heroesTotal || 0) > 0 && !heroAlive ? 'dead' : ''}" data-player-id="${esc(p.id)}" style="--pc:${esc(p.color)}${teamMode && p.team != null ? `;--tc:${TEAM_COLORS[p.team] || '#8ea6b3'}` : ''}">
         <div class="pcard-top">
           <span class="pcard-name">${esc(p.name)}</span>
           <span class="pcard-tags">${tags}</span>
@@ -1697,8 +1751,8 @@ function updatePlayerList() {
         ${extra}
         <div class="pcard-status ${status.tone}">${esc(status.text)}</div>
       </div>
-    `;
-  });
+    `);
+  }
   els.playerList.innerHTML = cards.join('');
 }
 
@@ -2140,8 +2194,8 @@ function updateLobbyUI() {
     : `等待房主开始 <small>${state.players.length}/${state.maxPlayers} 人已就位</small>`;
   els.startGameBtn.classList.toggle('secondary', !host);
   const levelName = { easy: '休闲', normal: '标准', hard: '困难', nightmare: '噩梦' }[state.aiLevel || 'normal'] || '标准';
-  const mapName = state.mapSize === 'large' ? '大地图 96×72' : '标准图 40×30';
-  const modeName = state.teamMode === 'teams' ? '团队 2v2' : '自由混战';
+  const mapName = state.mapSize === 'xlarge' ? '超大图 128×96' : state.mapSize === 'large' ? '大地图 96×72' : '标准图 40×30';
+  const modeName = state.teamMode === 'teams' ? `团队 ${Math.max(1, Math.floor(state.maxPlayers / 2))}v${Math.max(1, Math.floor(state.maxPlayers / 2))}` : '自由混战';
   els.lobbyNote.textContent = host
     ? `${mapName} · ${modeName} · AI 难度：${levelName}。把房间号发给朋友，或者直接开始让 AI 加入战局。`
     : `房主开始后，所有玩家进入魂塔部署阶段。${mapName} · ${modeName} · AI 难度：${levelName}。`;
@@ -3572,11 +3626,11 @@ function zoomViewAt(nextZoom, sx, sy) {
   clampView();
 }
 
-function centerCameraOnPlayer() {
+function centerCameraOnPlayer(playerId = app.playerId) {
   const battle = app.state?.battle;
-  const me = battle?.players?.find((p) => p.id === app.playerId);
-  const hero = me ? battle.heroes?.find((h) => h.owner === app.playerId && h.alive) : null;
-  const tower = me ? battle.towers?.find((t) => t.owner === app.playerId && t.alive) : null;
+  const me = battle?.players?.find((p) => p.id === playerId);
+  const hero = me ? battle.heroes?.find((h) => h.owner === playerId && (h.id === me.selectedHeroId || h.alive)) || battle.heroes?.find((h) => h.owner === playerId) : null;
+  const tower = me ? battle.towers?.find((t) => t.owner === playerId && t.alive) : null;
   const map = currentMap();
   const x = hero?.x ?? tower?.x ?? (map ? (map.center.x + 0.5) * map.tile : 0);
   const y = hero?.y ?? tower?.y ?? (map ? (map.center.y + 0.5) * map.tile : 0);
@@ -3681,6 +3735,72 @@ function frame(ts) {
   requestAnimationFrame(frame);
 }
 
+function ownerTeam(ownerId) {
+  const p = app.state?.battle?.players?.find((x) => x.id === ownerId) || app.state?.players?.find((x) => x.id === ownerId);
+  return p?.team ?? null;
+}
+
+function onMinimapPointer(e) {
+  const map = currentMap();
+  if (!map) return;
+  e.preventDefault();
+  app.minimapDrag = true;
+  const rect = els.minimap.getBoundingClientRect();
+  const fx = clamp((e.clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+  const fy = clamp((e.clientY - rect.top) / Math.max(1, rect.height), 0, 1);
+  app.view.camX = fx * map.w * map.tile;
+  app.view.camY = fy * map.h * map.tile;
+  applyView();
+}
+
+function drawMinimap() {
+  const map = currentMap();
+  const canvas = els.minimap;
+  if (!map || !canvas) return;
+  const ctx2 = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx2.clearRect(0, 0, W, H);
+  ctx2.fillStyle = 'rgba(4,10,16,0.9)';
+  ctx2.fillRect(0, 0, W, H);
+  if (app.mapCanvas) {
+    ctx2.globalAlpha = 0.72;
+    ctx2.drawImage(app.mapCanvas, 0, 0, W, H);
+    ctx2.globalAlpha = 1;
+  }
+  const sx = W / (map.w * map.tile);
+  const sy = H / (map.h * map.tile);
+  ctx2.fillStyle = 'rgba(255,207,107,0.8)';
+  for (const n of map.nodes || []) {
+    ctx2.fillRect(n.x * map.tile * sx - 1, n.y * map.tile * sy - 1, 2, 2);
+  }
+  const battle = app.state?.battle;
+  if (battle) {
+    for (const t of battle.towers) {
+      if (!t.alive) continue;
+      ctx2.fillStyle = t.owner === app.playerId ? '#ffffff' : (ownerTeam(t.owner) != null ? TEAM_COLORS[ownerTeam(t.owner)] : '#889');
+      ctx2.fillRect(t.x * sx - 2, t.y * sy - 2, 4, 4);
+    }
+    for (const h of battle.heroes) {
+      if (!h.alive) continue;
+      const me = h.owner === app.playerId;
+      const team = ownerTeam(h.owner);
+      ctx2.beginPath();
+      ctx2.arc(h.x * sx, h.y * sy, me ? 4 : 3, 0, Math.PI * 2);
+      ctx2.fillStyle = me ? '#ffffff' : team != null ? TEAM_COLORS[team] : '#ff8b82';
+      ctx2.fill();
+      ctx2.lineWidth = 1;
+      ctx2.strokeStyle = 'rgba(0,0,0,0.7)';
+      ctx2.stroke();
+    }
+  }
+  const tl = screenToWorld(0, 0);
+  const br = screenToWorld(app.view.w, app.view.h);
+  ctx2.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx2.lineWidth = 1.5;
+  ctx2.strokeRect(tl.x * sx, tl.y * sy, Math.max(4, (br.x - tl.x) * sx), Math.max(4, (br.y - tl.y) * sy));
+}
+
 function render() {
   const map = currentMap();
   if (!map) return;
@@ -3714,6 +3834,7 @@ function render() {
   drawAmbient();
 
   ctx.restore();
+  drawMinimap();
 }
 
 /* ------------------------------------------------------------------ */
@@ -4206,6 +4327,19 @@ function drawHeroes() {
       ctx.beginPath();
       ctx.arc(p.x, p.y, r + 3.5, 0, Math.PI * 2);
       ctx.stroke();
+    }
+
+    // 团队色外环：同队英雄一眼可辨
+    if (app.state.teamMode && ownerPlayer?.team != null) {
+      const teamColor = TEAM_COLORS[ownerPlayer.team] || '#8ea6b3';
+      ctx.save();
+      ctx.strokeStyle = rgba(teamColor, isOwn ? 0.9 : 0.72);
+      ctx.lineWidth = 2;
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r + 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
     }
 
     // 玩家色外环

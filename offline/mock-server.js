@@ -63,7 +63,7 @@
     return s;
   }
 
-  function makePlayers(name, teamMode) {
+  function makePlayers(name, teamMode, count = 4) {
     const heroes = [...AI_NAMES].sort(() => Math.random() - 0.5);
     const human = {
       id: 'offline-human',
@@ -77,7 +77,7 @@
       ready: false,
     };
     const ais = [];
-    for (let i = 1; i < 4; i += 1) {
+    for (let i = 1; i < count; i += 1) {
       const place = chooseAIPlacement(roomMap, i);
       ais.push({
         id: `offline-ai-${i}`,
@@ -96,8 +96,8 @@
 
   let roomMap = null;
 
-  function createQuick(name, aiLevel, mapSize, teamMode) {
-    const size = mapSize === 'large' ? 'large' : 'standard';
+  function createQuick(name, aiLevel, mapSize, teamMode, maxPlayers = 4) {
+    const size = mapSize === 'xlarge' ? 'xlarge' : mapSize === 'large' ? 'large' : 'standard';
     const mode = teamMode === 'teams' ? 'teams' : 'ffa';
     roomMap = generateMap(undefined, { size });
     const level = AI_LEVELS[aiLevel] ? aiLevel : 'normal';
@@ -105,7 +105,7 @@
       code: newCode(),
       createdAt: Date.now(),
       hostId: 'offline-human',
-      maxPlayers: 4,
+      maxPlayers: [4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4,
       aiLevel: level,
       mapSize: size,
       teamMode: mode,
@@ -118,7 +118,7 @@
       result: null,
       lastTick: Date.now(),
       lastBroadcast: 0,
-      players: makePlayers(name, mode),
+      players: makePlayers(name, mode, [4, 6, 8].includes(Number(maxPlayers)) ? Number(maxPlayers) : 4),
     };
     streams.clear();
     if (!timer) timer = setInterval(loop, 33);
@@ -424,7 +424,7 @@
     });
 
     if (u.pathname === '/api/quick' && method === 'POST') {
-      return ok(createQuick(body.name, body.aiLevel, body.mapSize, body.teamMode));
+      return ok(createQuick(body.name, body.aiLevel, body.mapSize, body.teamMode, body.maxPlayers));
     }
     if (u.pathname === '/api/action' && method === 'POST') {
       return ok(handleAction(body));

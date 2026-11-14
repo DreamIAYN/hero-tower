@@ -606,8 +606,8 @@ export function createBattle(room, map) {
     deathModeAt: 0,
     tutorial: !!room.tutorial,
     teamMode: room.teamMode === 'teams',
-    matchLimit: map.w > 50 ? 20 * 60 : MATCH_LIMIT_SECONDS,
-    deathModeAt: map.w > 50 ? 18 * 60 : DEATH_MODE_AT,
+    matchLimit: map.size === 'xlarge' ? 24 * 60 : map.w > 50 ? 20 * 60 : MATCH_LIMIT_SECONDS,
+    deathModeAt: map.size === 'xlarge' ? 22 * 60 : map.w > 50 ? 18 * 60 : DEATH_MODE_AT,
     aiLevel: AI_LEVELS[room.aiLevel] ? room.aiLevel : 'normal',
     ai: {},
   };
@@ -1216,6 +1216,104 @@ function castSkill(sim, player, x, y) {
       color: def.color,
       owner: player.id,
     });
+  } else if (skill.id === 'wave') {
+    const dx = x - hero.x;
+    const dy = y - hero.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    const tx = hero.x + (dx / dist) * Math.min(skill.range, dist);
+    const ty = hero.y + (dy / dist) * Math.min(skill.range, dist);
+    addEvent(sim, 'skill', {
+      skill: 'wave',
+      x: tx,
+      y: ty,
+      fromX: hero.x,
+      fromY: hero.y,
+      width: skill.width,
+      radius: skill.width,
+      color: def.color,
+      owner: player.id,
+    });
+    for (const target of enemiesOf(sim, hero.owner)) {
+      const lineDist = pointSegmentDistance(target.x, target.y, hero.x, hero.y, tx, ty);
+      if (lineDist <= skill.width / 2 + (target.radius || 0)) {
+        damageUnit(sim, hero, target, levelDamage, 'skill');
+        if ((target.kind === 'hero' || target.kind === 'summon') && target.alive) {
+          target.slowUntil = sim.time + skill.slowDuration;
+          target.slowFactor = skill.slow;
+          addEvent(sim, 'slow', { x: target.x, y: target.y, owner: target.owner });
+        }
+      }
+    }
+  } else if (skill.id === 'quake') {
+    addEvent(sim, 'skill', {
+      skill: 'quake',
+      x: hero.x,
+      y: hero.y,
+      radius: skill.radius,
+      color: def.color,
+      owner: player.id,
+    });
+    for (const target of enemiesOf(sim, hero.owner)) {
+      if (distance(hero, target) <= skill.radius + (target.radius || 0) * 0.35) {
+        damageUnit(sim, hero, target, levelDamage, 'skill');
+        if (target.kind === 'hero' && target.alive) {
+          target.rootUntil = sim.time + skill.rootDuration;
+          addEvent(sim, 'root', {
+            x: target.x,
+            y: target.y,
+            owner: target.owner,
+            duration: skill.rootDuration,
+            color: def.color,
+          });
+        }
+      }
+    }
+  } else if (skill.id === 'meteor') {
+    const dx = x - hero.x;
+    const dy = y - hero.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    const tx = hero.x + (dx / dist) * Math.min(skill.range, dist);
+    const ty = hero.y + (dy / dist) * Math.min(skill.range, dist);
+    addEvent(sim, 'skill', {
+      skill: 'meteor',
+      x: tx,
+      y: ty,
+      radius: skill.radius,
+      color: def.color,
+      owner: player.id,
+    });
+    for (const target of enemiesOf(sim, hero.owner)) {
+      if (Math.hypot(target.x - tx, target.y - ty) <= skill.radius + (target.radius || 0) * 0.35) {
+        damageUnit(sim, hero, target, levelDamage, 'skill');
+      }
+    }
+  } else if (skill.id === 'rally') {
+    const heal = skill.heal + skill.healPerLevel * (hero.level - 1);
+    const shield = skill.shield + skill.shieldPerLevel * (hero.level - 1);
+    addEvent(sim, 'skill', {
+      skill: 'rally',
+      x: hero.x,
+      y: hero.y,
+      radius: skill.radius,
+      color: def.color,
+      owner: player.id,
+    });
+    for (const ally of alliesOf(sim, hero.owner)) {
+      if (distance(hero, ally) > skill.radius) continue;
+      const healed = Math.min(ally.maxHp - ally.hp, heal);
+      ally.hp = Math.min(ally.maxHp, ally.hp + heal);
+      ally.shield = (ally.shield || 0) + shield;
+      ally.shieldUntil = sim.time + skill.duration;
+      addEvent(sim, 'heal', {
+        x: ally.x,
+        y: ally.y,
+        owner: player.id,
+        amount: Math.round(healed),
+        shield: Math.round(shield),
+        color: def.color,
+        kind: ally.kind,
+      });
+    }
   }
 
   addEvent(sim, 'skillCast', {
@@ -2015,6 +2113,12 @@ function aiThink(sim, p, ai) {
         (s) => s.alive && s.summonType === 'minion' && s.owner === p.id
       ).length;
       use = active < skill.maxMinions && (d < 360 || sim.time > 25);
+    } else if (skill.id === 'rally') {
+      use = alliesOf(sim, p.id).some((a) => a.hp < a.maxHp * 0.8);
+    } else if (skill.id === 'wave' || skill.id === 'meteor') {
+      use = d < (skill.range || 200) + 20;
+    } else if (skill.id === 'quake') {
+      use = d < 140;
     }
     if (use && !lowHp) castSkill(sim, p, nearestHero.x, nearestHero.y);
   }
@@ -2124,7 +2228,7 @@ function aiUseAllSkills(sim, p, cfg) {
       ).length;
       if (active >= skill.maxMinions) continue;
     }
-    if (skill.id === 'lunar') {
+    if (skill.id === 'lunar' || skill.id === 'rally') {
       const wounded = alliesOf(sim, p.id).some((a) => a.hp < a.maxHp * 0.72);
       if (!wounded) continue;
       p.selectedHeroId = unit.id;

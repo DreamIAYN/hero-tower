@@ -161,8 +161,8 @@ export const AI_HERO_TUNING = {
   },
 };
 
-export const PLAYER_COLORS = ['#5bd7ff', '#ff6b61', '#7ee787', '#c792ea'];
-export const PLAYER_COLOR_NAMES = ['苍蓝', '赤焰', '青翠', '紫电'];
+export const PLAYER_COLORS = ['#5bd7ff', '#ff6b61', '#7ee787', '#c792ea', '#fbbf24', '#f472b6', '#2dd4bf', '#a3e635'];
+export const PLAYER_COLOR_NAMES = ['苍蓝', '赤焰', '青翠', '紫电', '金耀', '桃夭', '碧潮', '青柠'];
 
 export const TERRAIN = {
   PLAIN: 0,
@@ -497,6 +497,130 @@ export const HEROES = {
     },
     blurb: '冲进人群的雷霆先锋，链雷会惩罚聚在一起的敌人。',
   },
+  tide: {
+    id: 'tide',
+    name: '潮歌',
+    title: '逐浪咏者',
+    role: '远程 / 控场',
+    price: 175,
+    hp: 240,
+    damage: 24,
+    armor: 2,
+    range: 185,
+    speed: 94,
+    attackInterval: 1.05,
+    radius: 12,
+    ranged: true,
+    color: '#38bdf8',
+    accent: '#bae6fd',
+    icon: '潮',
+    skill: {
+      id: 'wave',
+      name: '潮涌',
+      desc: '向指定方向推出一道潮浪，对路径上的敌人造成伤害并减速。',
+      cost: 50,
+      cooldown: 10,
+      range: 260,
+      width: 32,
+      damage: 55,
+      perLevel: 9,
+      slow: 0.45,
+      slowDuration: 2.2,
+    },
+    blurb: '用潮浪切开战场的远程法师，减速带让队友更容易追击。',
+  },
+  quake: {
+    id: 'quake',
+    name: '撼山',
+    title: '裂地守卫',
+    role: '近战 / 控场',
+    price: 150,
+    hp: 360,
+    damage: 25,
+    armor: 5,
+    range: 44,
+    speed: 82,
+    attackInterval: 1.0,
+    radius: 15,
+    ranged: false,
+    color: '#b08968',
+    accent: '#e7c6a5',
+    icon: '撼',
+    skill: {
+      id: 'quake',
+      name: '裂地',
+      desc: '重击地面，对周围敌人造成伤害并定身敌方英雄 1.5 秒。',
+      cost: 50,
+      cooldown: 13,
+      radius: 112,
+      damage: 65,
+      perLevel: 10,
+      rootDuration: 1.5,
+    },
+    blurb: '站桩能力极强的重装守卫，裂地可以打断敌方突进。',
+  },
+  meteor: {
+    id: 'meteor',
+    name: '星陨',
+    title: '陨星术士',
+    role: '远程 / 爆发',
+    price: 180,
+    hp: 205,
+    damage: 27,
+    armor: 1,
+    range: 210,
+    speed: 90,
+    attackInterval: 1.1,
+    radius: 11,
+    ranged: true,
+    color: '#fb7185',
+    accent: '#fecdd3',
+    icon: '星',
+    skill: {
+      id: 'meteor',
+      name: '陨星落',
+      desc: '在指定区域召唤陨星，对范围内敌人造成高额技能伤害。',
+      cost: 65,
+      cooldown: 14,
+      range: 280,
+      radius: 100,
+      damage: 85,
+      perLevel: 13,
+    },
+    blurb: '高风险的远程爆发法师，陨星落可以瞬间清空一片战场。',
+  },
+  drum: {
+    id: 'drum',
+    name: '战鼓',
+    title: '荒原鼓手',
+    role: '近战 / 辅助',
+    price: 145,
+    hp: 310,
+    damage: 22,
+    armor: 3,
+    range: 46,
+    speed: 100,
+    attackInterval: 0.9,
+    radius: 14,
+    ranged: false,
+    color: '#f59e0b',
+    accent: '#fef3c7',
+    icon: '鼓',
+    skill: {
+      id: 'rally',
+      name: '战鼓激励',
+      desc: '为周围友方英雄、魂塔恢复生命并附加护盾。',
+      cost: 55,
+      cooldown: 16,
+      radius: 180,
+      heal: 60,
+      healPerLevel: 10,
+      shield: 40,
+      shieldPerLevel: 6,
+      duration: 5,
+    },
+    blurb: '用鼓点维持战线的辅助战士，让队友在混战中站得更久。',
+  },
 };
 
 export const HERO_LIST = Object.values(HEROES);
@@ -583,7 +707,7 @@ export function resourceRespawnSeconds(time) {
 export const RESOURCE_PICKUP_RANGE = 30;
 export const BOUNTY_RATIO = 0.5;
 
-export const AI_NAMES = ['赤狐', '苍狼', '夜枭', '白鹿', '铁鸦', '青蛇', '灰熊', '云豹'];
+export const AI_NAMES = ['赤狐', '苍狼', '夜枭', '白鹿', '铁鸦', '青蛇', '灰熊', '云豹', '银狐', '赤鸢', '墨獾', '雪貂'];
 
 export function itemCost(itemId, owned) {
   const def = ITEMS[itemId];

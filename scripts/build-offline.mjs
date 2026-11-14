@@ -73,7 +73,7 @@ html = html.replace(/<title>[\s\S]*?<\/title>/, '<title>塔魂：四境争锋 ·
 html = html.replace(/<link rel="stylesheet" href="\/styles\.css[^"]*" \/>/, () => `<style>\n${css}\n${offlineCss}\n</style>`);
 html = html.replace(
   /<div class="start-panel">/,
-  '<div class="offline-badge"><b>离线单机版</b><span>作者 DeepSeek · 无需联网 · 你 + 3 名 AI</span></div>\n            <div class="start-panel">'
+  '<div class="offline-badge"><b>离线单机版</b><span>作者 DeepSeek · 无需联网 · 4 / 6 / 8 人 · AI 陪玩</span></div>\n            <div class="start-panel">'
 );
 const scripts = `<script>\n${escapeInline(engineBundle)}\n</script>
 <script>\n${escapeInline(mock)}\n</script>
